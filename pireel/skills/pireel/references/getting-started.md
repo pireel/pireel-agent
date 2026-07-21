@@ -57,17 +57,17 @@ Call `get_state` and interpret:
 
 Ask the user how to start, then do it:
 
-**A. From a local video file** (most common):
+**Open the live editor FIRST** (both paths need a tab; the local-video path streams the bytes straight into it): call `create_browser_handoff` (pass the `project_id`, or omit for a fresh project) and open the returned `url` with **your own built-in/embedded browser tool** — the browser whose pages you can see and control. NEVER open it via the OS `open`/`start`/`xdg-open`, the user's default browser, or an already-connected external Chrome: the ticket is single-use (~60 s) and spending it on a surface you cannot see wastes it. Then **keep that tab visible and open past this turn** so it isn't auto-cleaned right after you open it — use your browser tool's visibility + keep-tab controls (on Codex, drive the in-app browser through the Node REPL `js` `browser`/`tab` API — `tab.goto(url)`, visibility via `browser.capabilities.get("visibility").set(true)`, keep-tab via `browser.documentation()` — never `open`/external tools; see `pireel-basics.md`). To hand the user a link, give the plain `<BASE>/zh/studio/<projectId>` instead — never the handoff URL.
+
+**A. From a local video file** (most common) — with the tab open from above:
 
 1. Call `import_media` with NO arguments → it returns a short-lived import `token` (never pass OAuth tokens to the shell).
 2. Use the import helper. Prefer the bundled one at `<pireel-skill-dir>/scripts/import-media.mjs`; otherwise download it: `curl -fsSL <BASE>/import-media.mjs -o /tmp/pireel-import.mjs`.
 3. Ensure `ffmpeg`/`ffprobe` exist. If missing, INSTALL THEM YOURSELF (`brew install ffmpeg` / `winget install --id Gyan.FFmpeg` / `apt-get install -y ffmpeg`) — the host command-approval flow is the user's consent. If install is denied, continue with a degraded import (no transcript) and say so.
 4. Run (Node ≥ 20): `node <helper> --base <BASE> --token <token> /path/to/video.mp4`
-5. It uploads (content-addressed, dedup ≤ 2 GB), probes metadata, transcribes audio, registers a project. Then `get_state` and edit.
+5. The main video streams straight into the open tab over the user's machine — NOT uploaded to the cloud (only the small transcription audio is). It probes metadata, transcribes, and registers a project (≤ 2 GB). If it reports `studio_not_open`, your tab isn't connected — reopen it (redo the handoff) and re-run. Then `get_state` and edit.
 
-**B. From the browser**: the user opens `<BASE>`, creates a studio project and uploads a video; the live bridge connects automatically.
-
-**After either path, open the live editor**: call `create_browser_handoff` (pass the `project_id`, or omit for a fresh project) and open the returned `url` with **your own built-in/embedded browser tool** — the browser whose pages you can see and control. NEVER open it via the OS `open`/`start`/`xdg-open`, the user's default browser, or an already-connected external Chrome: the ticket is single-use (~60 s) and spending it on a surface you cannot see wastes it. Then **keep that tab visible and open past this turn** so it isn't auto-cleaned right after you open it — use your browser tool's visibility + keep-tab controls (on Codex, drive the in-app browser through the Node REPL `js` `browser`/`tab` API — `tab.goto(url)`, visibility via `browser.capabilities.get("visibility").set(true)`, keep-tab via `browser.documentation()` — never `open`/external tools; see `pireel-basics.md`). To hand the user a link, give the plain `<BASE>/zh/studio/<projectId>` instead — never the handoff URL.
+**B. From the browser**: the user opens `<BASE>`, creates a studio project and uploads a video there; the live bridge connects automatically.
 
 ## Self-report (print this when done)
 

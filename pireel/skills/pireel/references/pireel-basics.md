@@ -77,7 +77,7 @@ Four tools run **Pireel's own LLM and charge the account's credits**: `add_block
 
 ## Local media import
 
-When the user points at a LOCAL video file path, load the `asset-import` skill — its helper script uploads the bytes to Pireel cloud storage and registers them on a project via `import_media`, with optional ffprobe metadata and transcription. Never tell the user to manually upload in the browser as the first answer.
+When the user points at a LOCAL video file path, load the `asset-import` skill — its helper streams the main video straight into the OPEN studio tab over the user's machine (no cloud upload; a tab must be open first) and registers it on a project via `import_media`, with optional ffprobe metadata and transcription (only the small transcription audio goes to the cloud). Never tell the user to manually upload in the browser as the first answer.
 
 ## Seeing and offline mode
 

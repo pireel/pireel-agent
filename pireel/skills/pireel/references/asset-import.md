@@ -1,23 +1,36 @@
 ---
 name: asset-import
-description: Use when the user points at a LOCAL video or image file (a path like /Users/..., C:\..., or a chat attachment materialized as a file) that should be used in Pireel Studio. Covers uploading local source video into Pireel cloud storage, registering it on a project, optional metadata probing and transcription via ffmpeg/ffprobe, and when to fall back to browser upload.
+description: Use when the user points at a LOCAL video or image file (a path like /Users/..., C:\..., or a chat attachment materialized as a file) that should be used in Pireel Studio. Covers streaming local source video straight into the OPEN Studio tab over the user's machine (no cloud upload), registering it on a project, optional metadata probing and transcription via ffmpeg/ffprobe, and when the studio tab must be open.
 ---
 
 # Asset Import — local video into Pireel
 
 When the user gives a local video path ("把 ~/Desktop/talk.mp4 剪一下"), do NOT tell them to open the browser and upload manually — import it yourself with the bundled helper script, then edit through the normal Pireel tools.
 
+## Where the bytes go (transfer matrix)
+
+This is the authoritative statement — tool descriptions and other references must not contradict it.
+
+| Asset | Transfer |
+|---|---|
+| **Main video** | **localhost → the OPEN Studio tab, over the user's machine — NOT uploaded to the cloud** (fast even for big files) |
+| Transcription audio | a small AAC is uploaded to the cloud (Pireel's transcription needs a URL it can fetch) |
+| B-roll (`--broll`) | uploaded to the cloud (`insert_clip` fetches it later, possibly in another session) |
+| Images | uploaded to the cloud asset library, or inlined as a data URI |
+
+**Because the main video streams straight into the browser, a Studio tab MUST be open before you import it.** If none is, the helper exits with `studio_not_open` — open one (call `create_browser_handoff` and open the URL in your own in-app browser, or ask the user to open the project) and re-run the helper. There is no cloud fallback for the main video.
+
 ## The helper
 
-`../scripts/import-media.mjs` (relative to this reference — the `pireel` skill's `scripts/` dir). Node ≥ 20, zero npm dependencies. It:
+`../scripts/import-media.mjs` (relative to this reference — the `pireel` skill's `scripts/` dir). Node ≥ 20, zero npm dependencies. For a main video it:
 
 1. Computes the content signature (`name:size:mtime` — the same fingerprint the browser uses, so the same file is one object however it enters).
-2. Uploads the bytes to Pireel cloud storage via presigned PUT. Re-imports of the same file are dedup-skipped server-side ("bytes already in cloud").
+2. Starts a throwaway `127.0.0.1` HTTP server and, via `register-local`, hands the bytes to the open Studio tab — the browser fetches them over loopback straight into its local library (OPFS). The video never touches the cloud. If no tab is open it stops here and asks you to open one and retry.
 3. If `ffprobe` is available: probes duration/width/height and the audio-track start offset.
-4. If `ffmpeg` is available and the file has audio: extracts a small AAC track, uploads it, and runs Pireel's transcription — the transcript lands on the project immediately.
+4. If `ffmpeg` is available and the file has audio: extracts a small AAC track, uploads ONLY that audio to the cloud, and runs Pireel's transcription — the transcript lands on the project immediately.
 5. Registers everything on a project (server-side, conservative targeting) and prints a JSON summary.
 
-Full flow: `import_media` (no args, MCP) → token → run helper with `--token` → read the JSON → `get_state`.
+Full flow: open a tab if none is → `import_media` (no args, MCP) → token → run helper with `--token` → read the JSON → `get_state`.
 
 ```bash
 node <pireel-skill-dir>/scripts/import-media.mjs --token <import-token> /path/to/video.mp4
@@ -42,7 +55,7 @@ If the package manager itself is unavailable or the install command is denied, T
 
 - **Both available**: full import — duration/dims registered, transcript ready; transcript-based offline editing (read_script / cut_narration / plan_brief / set_captions) works immediately, before any browser is opened.
 - **ffprobe only**: metadata registered, no transcript. Transcription happens later in the browser (`extract_asr`).
-- **Neither**: bytes + registration only. The project opens fine — the browser completes metadata and the video auto-attaches from cloud storage. Nothing is lost, just deferred.
+- **Neither**: the video still streams into the open tab and registers; only metadata/transcript are deferred (the browser completes dimensions on load, and `extract_asr` produces the transcript later). Nothing is lost, just deferred.
 
 ## Images
 
@@ -73,12 +86,12 @@ This uploads bytes only (no transcription, no project registration) and prints a
 
 - Call `get_state` — the new/updated project is now the latest, so offline tools target it.
 - If a transcript was registered (`transcript > 0` in the helper output), go straight to transcript work: `read_script`, cleanup via the talking-head-cleanup skill, `plan_brief` → `submit_plan`.
-- Storyboarding (`lay_out`), visual analysis, and Pireel-side generation still need the studio tab open. Open the live editor for the user: `https://pireel.com/zh/studio/<projectId>` — in your host's in-app browser if available (the user watches edits land live; the surface must be signed in), otherwise ask them to open it. The open tab upgrades offline mode to the live bridge, and the video auto-attaches from cloud storage.
+- The tab was already open for the import (that's how the bytes got in), so the live bridge is connected — storyboarding (`lay_out`), visual analysis, and Pireel-side generation are all available. If the user later reopens the project on a DIFFERENT device (where the local bytes aren't cached), the video won't auto-return — they re-pick the file. Cross-device video persistence is a deliberate non-goal of this path.
 
 ## When NOT to use the helper
 
 - The file is already in the project (check `get_state` — same video sig means re-import is a no-op anyway).
-- The user is already working in the studio tab and can drag the file in faster than an upload round-trip.
+- The user is already in the studio tab and can just drag the file in themselves.
 - Upload is denied by host policy: stop, explain, and ask the user to upload in the studio tab instead. Do not work around a denial.
 
 ## Limits

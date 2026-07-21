@@ -47,6 +47,20 @@ const opt = (name, fallback = null) => {
 const has = (name) => args.includes(`--${name}`);
 const files = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && VALUE_FLAGS.has(args[i - 1])));
 
+// Authoritative data-path statement. Printed at startup and via --explain so the agent can
+// verify where each asset goes BEFORE any transfer. Keep in sync with asset-import.md's matrix.
+const TRANSFER_MATRIX = [
+  'Main video:          local loopback → the OPEN Studio tab, NOT uploaded to the cloud',
+  'Transcription audio: a small AAC is uploaded to the cloud (transcription needs a fetchable URL)',
+  'B-roll (--broll):    uploaded to the cloud (insert_clip fetches it later)',
+  'Images:              uploaded to the cloud asset library (or inlined as a data URI)',
+  'Requires a Studio tab OPEN for the main video (bytes stream into it). No cloud fallback for it.',
+];
+if (has('explain')) {
+  console.log(TRANSFER_MATRIX.join('\n'));
+  process.exit(0);
+}
+
 const BASE = (opt('base') ?? process.env.PIREEL_BASE ?? 'https://pireel.com').replace(/\/$/, '');
 const CRED = opt('token');
 if (!CRED) fail('missing credential: pass --token <import token from the import_media MCP tool>');
@@ -256,6 +270,7 @@ const bins = { ffprobe: resolveBin('ffprobe', 'ffprobe', 'FFPROBE_PATH'), ffmpeg
 if (!bins.ffmpeg || !bins.ffprobe) {
   console.error('[pireel-import] ffmpeg/ffprobe not fully available — degraded import (see skill: install them for metadata + transcript)');
 }
+console.error('[pireel-import] data paths:\n' + TRANSFER_MATRIX.map((l) => `  ${l}`).join('\n'));
 const out = [];
 for (const f of files) out.push(/\.(png|jpe?g|webp|gif)$/i.test(f) ? await importImage(f, bins) : await importOne(f, bins));
 console.log(JSON.stringify({ imports: out }, null, 2));
