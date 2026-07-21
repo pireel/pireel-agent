@@ -1,0 +1,49 @@
+{
+  "name": "pireel",
+  "version": "0.1.0",
+  "description": "Edit Pireel Studio videos from your coding agent: transcript-based cutting, storyboarding, designed graphics, subtitles, themes — executed live in the user's open studio browser tab.",
+  "author": {
+    "name": "Pireel",
+    "url": "https://pireel.com"
+  },
+  "homepage": "https://pireel.com",
+  "mcpServers": "./.mcp.json",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Pireel Studio",
+    "defaultPrompt": [
+      "Read the current state and tell me what's on the timeline",
+      "Clean up my talking-head: cut filler words, retakes, and rambling",
+      "One-click cut: turn this video into a first draft with graphics",
+      "Add a clean set of full-sentence captions to the whole video"
+    ],
+    "shortDescription": "Edit Pireel Studio videos from your agent",
+    "longDescription": "Workflow skills and MCP server configuration for editing talking-head videos in Pireel Studio: importing local media, transcript-based speech cleanup, storyboarding with designed graphics (BYO — your model generates, Pireel validates), subtitles, themes, framing, and local export, live in the user's open studio tab or offline against the cloud project.",
+    "developerName": "Pireel",
+    "category": "Design",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://pireel.com",
+    "brandColor": "#17181b",
+    "composerIcon": "./assets/logo.png",
+    "logo": "./assets/logo.png"
+  },
+  "repository": "https://github.com/pireel/pireel-agent",
+  "license": "Apache-2.0",
+  "keywords": [
+    "pireel",
+    "video",
+    "video-editing",
+    "talking-head",
+    "shorts",
+    "captions",
+    "subtitles",
+    "transcription",
+    "storyboard",
+    "motion-graphics",
+    "codex",
+    "mcp"
+  ]
+}

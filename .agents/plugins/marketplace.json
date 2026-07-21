@@ -1,0 +1,15 @@
+{
+  "name": "pireel-marketplace",
+  "description": "Pireel plugins for MCP-capable coding agents (Codex, Claude Code).",
+  "owner": {
+    "name": "Pireel",
+    "url": "https://pireel.com"
+  },
+  "plugins": [
+    {
+      "name": "pireel",
+      "source": "./pireel",
+      "description": "Edit Pireel Studio videos from your agent: transcript-based cutting, storyboarding, designed graphics, subtitles, themes — live in the user's open studio tab."
+    }
+  ]
+}
