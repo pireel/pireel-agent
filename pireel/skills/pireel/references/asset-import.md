@@ -22,15 +22,15 @@ This is the authoritative statement — tool descriptions and other references m
 
 ## Two ways in (both keep the video local)
 
-**A. Direct injection — PREFERRED when you drive a browser (e.g. Codex's in-app browser).** No import token, no helper, no localhost. Open the studio tab first (see getting-started's handoff step), then set the file on the studio's always-present hidden input — Playwright is exposed as `tab.playwright`:
+**A. The helper — PRIMARY.** Runs a throwaway localhost server and hands the bytes to the open tab via `register-local`; the tab fetches them over loopback (verified working, including in restricted in-app browsers — every response carries a Content-Type). Works with ANY browser hosting the tab (the user's own Chrome or an agent-driven one) and needs no browser-driving ability from you: one command imports, probes metadata, transcribes, and registers the project. Details below.
+
+**B. Direct injection (fallback — when the helper can't run, and you drive the browser yourself).** No import token, no helper. With the studio tab open, set the file on the studio's always-present hidden input — Playwright is exposed as `tab.playwright`:
 
 ```js
 await tab.playwright.setInputFiles('[data-pireel-video-input]', '/absolute/path/to/video.mp4');
 ```
 
-The studio reads the file locally into its OPFS library and makes it the main video — nothing is uploaded. Then transcribe with the `extract_asr` MCP tool (it runs in the tab). This sidesteps the localhost path entirely, so it is unaffected by any private-network / port restrictions in the in-app browser. If `setInputFiles` isn't available, catch the file chooser instead: `tab.playwright.waitForEvent('filechooser')` then `chooser.setFiles(path)` around a click on the input.
-
-**B. The helper (fallback — non-browser agents, or when you can't drive the file input).** Runs a throwaway localhost server and hands the bytes to the open tab via `register-local`. Same result (local, no cloud), just a different transport. Details below.
+The studio reads the file locally into its OPFS library and makes it the main video — nothing is uploaded. Then transcribe with the `extract_asr` MCP tool (it runs in the tab; note this route skips the helper's ffprobe/transcript step). If `setInputFiles` isn't available, catch the file chooser instead: `tab.playwright.waitForEvent('filechooser')` then `chooser.setFiles(path)` around a click on the input.
 
 ## The helper
 

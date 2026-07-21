@@ -61,8 +61,8 @@ Ask the user how to start, then do it:
 
 **A. From a local video file** (most common) — with the tab open from above. Two ways, both keep the video local (no upload):
 
-- **Preferred — inject it directly** (you're already driving the browser): `await tab.playwright.setInputFiles('[data-pireel-video-input]', '/absolute/path/video.mp4')`. The studio loads it locally into its OPFS library and makes it the main video. Then call `extract_asr` for the transcript. No token, no helper, no localhost — unaffected by any in-app-browser port restrictions.
-- **Fallback — the helper** (can't drive the file input): `import_media` with NO args → `token` → run `node <helper> --base <BASE> --token <token> /path/to/video.mp4` (bundled at `<pireel-skill-dir>/scripts/import-media.mjs`, or `curl -fsSL <BASE>/import-media.mjs`; install `ffmpeg`/`ffprobe` yourself if missing). It streams the video into the open tab over the user's machine (not uploaded), transcribes, and registers a project. If it reports `studio_not_open`, redo the handoff and re-run.
+- **Primary — the helper**: `import_media` with NO args → `token` → run `node <helper> --base <BASE> --token <token> /path/to/video.mp4` (bundled at `<pireel-skill-dir>/scripts/import-media.mjs`, or `curl -fsSL <BASE>/import-media.mjs`; install `ffmpeg`/`ffprobe` yourself if missing). It streams the video into the open tab over the user's machine (not uploaded), transcribes, and registers a project in one shot. If it reports `studio_not_open`, redo the handoff and re-run.
+- **Fallback — inject it directly** (helper unavailable, and you drive the browser): `await tab.playwright.setInputFiles('[data-pireel-video-input]', '/absolute/path/video.mp4')`. The studio loads it locally into its OPFS library and makes it the main video. Then call `extract_asr` for the transcript.
 
 Then `get_state` and edit. See the `asset-import` skill for the full transfer matrix.
 
