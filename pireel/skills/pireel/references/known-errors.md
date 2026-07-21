@@ -30,9 +30,9 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 
 ## `capture_frame` / `export_video` — `Failed to fetch`, or fonts look plain
 
-**Meaning**: the video bytes are fully LOCAL, but frame capture and export currently rasterize on-screen text by inlining webfonts fetched from **Google Fonts** (an external host). A browser that blocks external hosts — notably an in-app/embedded agent browser scoped to local targets — can't reach it.
+**Meaning**: the video bytes are fully LOCAL, but frame capture and export rasterize on-screen text by inlining webfonts from **Google Fonts** (an external host). A browser that blocks external hosts — notably an in-app/embedded agent browser scoped to local targets — can't fetch them directly.
 
-**Recovery**: nothing to do — as of the latest deploy this degrades gracefully: if the fonts can't be fetched, the frame/export still renders with **system fallback fonts** (no more `Failed to fetch`). Text may just look plainer than the live preview. The video, timeline, cuts and layout are unaffected (all local). If you saw `Failed to fetch` from `capture_frame`, the user's tab may be on an older build — a refresh picks up the fix.
+**Recovery**: nothing to do — font fetches now fall back through Pireel's own same-origin proxy (the server fetches Google Fonts for the browser), so fonts render properly even in restricted browsers; if even the proxy is unreachable (offline / self-hosted shell with no backend), the frame/export still renders with **system fallback fonts** instead of failing. The video, timeline, cuts and layout are unaffected (all local). If you still see `Failed to fetch` from `capture_frame`, the user's tab is on an older build — a refresh picks up the fix.
 
 ## HTTP 401
 
