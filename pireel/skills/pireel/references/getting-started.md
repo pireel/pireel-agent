@@ -59,13 +59,12 @@ Ask the user how to start, then do it:
 
 **Open the live editor FIRST** (both paths need a tab; the local-video path streams the bytes straight into it): call `create_browser_handoff` (pass the `project_id`, or omit for a fresh project) and open the returned `url` with **your own built-in/embedded browser tool** — the browser whose pages you can see and control. NEVER open it via the OS `open`/`start`/`xdg-open`, the user's default browser, or an already-connected external Chrome: the ticket is single-use (~60 s) and spending it on a surface you cannot see wastes it. Then **keep that tab visible and open past this turn** so it isn't auto-cleaned right after you open it — use your browser tool's visibility + keep-tab controls (on Codex, drive the in-app browser through the Node REPL `js` `browser`/`tab` API — `tab.goto(url)`, visibility via `browser.capabilities.get("visibility").set(true)`, keep-tab via `browser.documentation()` — never `open`/external tools; see `pireel-basics.md`). To hand the user a link, give the plain `<BASE>/zh/studio/<projectId>` instead — never the handoff URL.
 
-**A. From a local video file** (most common) — with the tab open from above:
+**A. From a local video file** (most common) — with the tab open from above. Two ways, both keep the video local (no upload):
 
-1. Call `import_media` with NO arguments → it returns a short-lived import `token` (never pass OAuth tokens to the shell).
-2. Use the import helper. Prefer the bundled one at `<pireel-skill-dir>/scripts/import-media.mjs`; otherwise download it: `curl -fsSL <BASE>/import-media.mjs -o /tmp/pireel-import.mjs`.
-3. Ensure `ffmpeg`/`ffprobe` exist. If missing, INSTALL THEM YOURSELF (`brew install ffmpeg` / `winget install --id Gyan.FFmpeg` / `apt-get install -y ffmpeg`) — the host command-approval flow is the user's consent. If install is denied, continue with a degraded import (no transcript) and say so.
-4. Run (Node ≥ 20): `node <helper> --base <BASE> --token <token> /path/to/video.mp4`
-5. The main video streams straight into the open tab over the user's machine — NOT uploaded to the cloud (only the small transcription audio is). It probes metadata, transcribes, and registers a project (≤ 2 GB). If it reports `studio_not_open`, your tab isn't connected — reopen it (redo the handoff) and re-run. Then `get_state` and edit.
+- **Preferred — inject it directly** (you're already driving the browser): `await tab.playwright.setInputFiles('[data-pireel-video-input]', '/absolute/path/video.mp4')`. The studio loads it locally into its OPFS library and makes it the main video. Then call `extract_asr` for the transcript. No token, no helper, no localhost — unaffected by any in-app-browser port restrictions.
+- **Fallback — the helper** (can't drive the file input): `import_media` with NO args → `token` → run `node <helper> --base <BASE> --token <token> /path/to/video.mp4` (bundled at `<pireel-skill-dir>/scripts/import-media.mjs`, or `curl -fsSL <BASE>/import-media.mjs`; install `ffmpeg`/`ffprobe` yourself if missing). It streams the video into the open tab over the user's machine (not uploaded), transcribes, and registers a project. If it reports `studio_not_open`, redo the handoff and re-run.
+
+Then `get_state` and edit. See the `asset-import` skill for the full transfer matrix.
 
 **B. From the browser**: the user opens `<BASE>`, creates a studio project and uploads a video there; the live bridge connects automatically.
 

@@ -20,6 +20,18 @@ This is the authoritative statement — tool descriptions and other references m
 
 **Because the main video streams straight into the browser, a Studio tab MUST be open before you import it.** If none is, the helper exits with `studio_not_open` — open one (call `create_browser_handoff` and open the URL in your own in-app browser, or ask the user to open the project) and re-run the helper. There is no cloud fallback for the main video.
 
+## Two ways in (both keep the video local)
+
+**A. Direct injection — PREFERRED when you drive a browser (e.g. Codex's in-app browser).** No import token, no helper, no localhost. Open the studio tab first (see getting-started's handoff step), then set the file on the studio's always-present hidden input — Playwright is exposed as `tab.playwright`:
+
+```js
+await tab.playwright.setInputFiles('[data-pireel-video-input]', '/absolute/path/to/video.mp4');
+```
+
+The studio reads the file locally into its OPFS library and makes it the main video — nothing is uploaded. Then transcribe with the `extract_asr` MCP tool (it runs in the tab). This sidesteps the localhost path entirely, so it is unaffected by any private-network / port restrictions in the in-app browser. If `setInputFiles` isn't available, catch the file chooser instead: `tab.playwright.waitForEvent('filechooser')` then `chooser.setFiles(path)` around a click on the input.
+
+**B. The helper (fallback — non-browser agents, or when you can't drive the file input).** Runs a throwaway localhost server and hands the bytes to the open tab via `register-local`. Same result (local, no cloud), just a different transport. Details below.
+
 ## The helper
 
 `../scripts/import-media.mjs` (relative to this reference — the `pireel` skill's `scripts/` dir). Node ≥ 20, zero npm dependencies. For a main video it:
