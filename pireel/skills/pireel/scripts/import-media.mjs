@@ -125,9 +125,13 @@ async function startLocalServer(path, contentType) {
     'Access-Control-Allow-Headers': '*',
     Vary: 'Origin',
   };
+  // Every response carries a Content-Type: Codex's in-app browser (Chrome Use) blocks localhost
+  // responses that lack one with ERR_BLOCKED_BY_CLIENT (see openai/codex#30687), including the
+  // CORS/PNA preflight — so the OPTIONS and 404 replies set it too, not just the 200.
+  const TEXT = 'text/plain; charset=utf-8';
   const server = createServer((req, res) => {
-    if (req.method === 'OPTIONS') return void res.writeHead(204, cors).end();
-    if (req.method !== 'GET' || req.url !== routePath) return void res.writeHead(404, cors).end();
+    if (req.method === 'OPTIONS') return void res.writeHead(204, { ...cors, 'Content-Type': TEXT }).end();
+    if (req.method !== 'GET' || req.url !== routePath) return void res.writeHead(404, { ...cors, 'Content-Type': TEXT }).end('not found');
     res.writeHead(200, { ...cors, 'Content-Type': contentType, 'Content-Length': String(st.size), 'Cache-Control': 'no-store' });
     createReadStream(path).pipe(res);
   });
