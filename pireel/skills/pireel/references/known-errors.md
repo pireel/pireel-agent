@@ -28,6 +28,12 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 2. Call `get_state` — the operation may have completed after the bridge stopped waiting.
 3. Only then retry, once. For `extract_asr` / `analyze_visual` remember they are minute-scale by design and cached per file — a retry after a real timeout resumes cheaply, but a retry fired at a still-running job just queues noise.
 
+## `capture_frame` / `export_video` — `Failed to fetch`, or fonts look plain
+
+**Meaning**: the video bytes are fully LOCAL, but frame capture and export currently rasterize on-screen text by inlining webfonts fetched from **Google Fonts** (an external host). A browser that blocks external hosts — notably an in-app/embedded agent browser scoped to local targets — can't reach it.
+
+**Recovery**: nothing to do — as of the latest deploy this degrades gracefully: if the fonts can't be fetched, the frame/export still renders with **system fallback fonts** (no more `Failed to fetch`). Text may just look plainer than the live preview. The video, timeline, cuts and layout are unaffected (all local). If you saw `Failed to fetch` from `capture_frame`, the user's tab may be on an older build — a refresh picks up the fix.
+
 ## HTTP 401
 
 **Meaning**: the OAuth session is missing or expired. This is transport-level — no tool ran.
