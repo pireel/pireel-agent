@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 /**
- * Pireel local media import helper — uploads local source files into the user's
- * Pireel cloud storage. Videos are content-addressed (dedup-idempotent) and
- * registered on a project, with optional metadata probing (ffprobe) and audio
- * transcription (ffmpeg) so transcript-based offline editing works immediately.
- * Images (png/jpg/webp/gif) go into the user's asset library and return a
- * reference URL usable in composed blocks (<img src>).
+ * Pireel local media import helper.
+ *
+ * Main video: LOCAL fast path — the bytes are served from a throwaway localhost HTTP
+ * server and streamed straight into the open studio tab (register-local, over 127.0.0.1);
+ * the video never touches the cloud. A studio tab MUST be open — if it isn't, this exits
+ * asking the agent to open it (create_browser_handoff) and re-run. Only the small extracted
+ * audio goes to R2 (transcription needs a public URL DashScope can fetch).
+ * B-roll (--broll): still uploaded to the cloud (insert_clip fetches it later, maybe in
+ * another session). Images (png/jpg/webp/gif): uploaded to the user's asset library and
+ * return a reference URL usable in composed blocks (<img src>).
+ * Metadata probing (ffprobe) + audio transcription (ffmpeg) are optional.
  *
  * Usage (normal flow — the agent gets `token` from the `import_media` MCP tool):
  *   node import-media.mjs --token imp1.… [--base https://pireel.com] \
@@ -27,7 +32,8 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { openAsBlob } from 'node:fs';
+import { createServer } from 'node:http';
+import { openAsBlob, createReadStream } from 'node:fs';
 import { stat, readFile, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
@@ -88,6 +94,37 @@ async function media(body) {
   return { ok: r.ok, status: r.status, json: j };
 }
 
+/**
+ * Start a throwaway localhost HTTP server that serves ONE file to the open studio tab.
+ * The main-video fast path streams bytes straight into the browser over 127.0.0.1 — no
+ * cloud round-trip. Bound to loopback + random path token + torn down right after the tab
+ * fetches it. CORS + Private-Network-Access headers let the HTTPS studio page reach it
+ * (Chrome sends an OPTIONS preflight carrying Access-Control-Request-Private-Network).
+ */
+async function startLocalServer(path, contentType) {
+  const st = await stat(path);
+  const routePath = `/${Math.random().toString(36).slice(2)}`;
+  const cors = {
+    'Access-Control-Allow-Origin': BASE,
+    'Access-Control-Allow-Private-Network': 'true',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': '*',
+    Vary: 'Origin',
+  };
+  const server = createServer((req, res) => {
+    if (req.method === 'OPTIONS') return void res.writeHead(204, cors).end();
+    if (req.method !== 'GET' || req.url !== routePath) return void res.writeHead(404, cors).end();
+    res.writeHead(200, { ...cors, 'Content-Type': contentType, 'Content-Length': String(st.size), 'Cache-Control': 'no-store' });
+    createReadStream(path).pipe(res);
+  });
+  await new Promise((resolve, reject) => {
+    server.on('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const { port } = server.address();
+  return { url: `http://127.0.0.1:${port}${routePath}`, close: () => new Promise((r) => server.close(r)) };
+}
+
 const IMAGE_MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' };
 
 /** Image → user asset library. Returns a reference URL for composed blocks (<img src>)
@@ -120,82 +157,99 @@ async function importImage(path, bins) {
   return { file: basename(path), kind: 'image', key: reg.json.key, url: reg.json.url, url_kind: reg.json.url_kind };
 }
 
+/** Extract audio → upload the small audio to R2 → server-side transcription (ASR needs a
+ *  public URL DashScope can fetch; only the tiny audio goes to the cloud, never the video).
+ *  Returns offset-corrected sentence segments (empty on any failure — transcript is optional). */
+async function transcribe(path, meta, bins) {
+  if (!bins.ffmpeg || !(meta?.hasAudio ?? true) || has('no-transcribe')) return [];
+  const tmp = join(tmpdir(), `pireel-audio-${Date.now()}.m4a`);
+  const r = spawnSync(bins.ffmpeg, ['-y', '-v', 'quiet', '-i', path, '-vn', '-acodec', 'aac', '-b:a', '64k', tmp], { stdio: 'ignore' });
+  if (r.status !== 0) {
+    console.error('[pireel-import] audio extraction failed — importing without transcript');
+    return [];
+  }
+  try {
+    console.error('[pireel-import] transcribing…');
+    const audio = await readFile(tmp);
+    const preA = await media({ action: 'put-audio', size: audio.byteLength });
+    if (!preA.ok || !preA.json.url) return [];
+    const putA = await fetch(preA.json.url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'audio/mp4', 'Cache-Control': 'public, max-age=2592000, immutable' },
+      body: audio,
+    });
+    if (!putA.ok) return [];
+    const asr = await media({ action: 'asr', audio_key: preA.json.key });
+    const off = meta?.audioOffset ?? 0;
+    const segs = (asr.json.segments ?? [])
+      .filter((s) => s.text?.trim())
+      .map((s) => ({ start: Math.max(0, s.start + off), end: Math.max(s.start + off + 0.1, s.end + off), text: s.text.trim() }));
+    console.error(`[pireel-import] transcript: ${segs.length} sentences`);
+    return segs;
+  } finally {
+    await unlink(tmp).catch(() => {});
+  }
+}
+
 async function importOne(path, bins) {
   const st = await stat(path);
-  // Content signature, same shape as the browser's fingerprint: one file → one cloud object
+  // Content signature, same shape as the browser's fingerprint: one file → one object
   const sig = `${basename(path)}:${st.size}:${Math.round(st.mtimeMs)}`;
   console.error(`[pireel-import] ${basename(path)} · ${(st.size / 1048576).toFixed(1)}MB · sig=${sig}`);
-
-  // 1) Presigned direct upload (content-addressed; re-imports dedup server-side)
   const contentType = /\.mov$/i.test(path) ? 'video/quicktime' : /\.webm$/i.test(path) ? 'video/webm' : 'video/mp4';
-  const pre = await media({ action: 'put', sig, size: st.size, content_type: contentType });
-  if (!pre.ok) fail(`presign failed (HTTP ${pre.status}): ${JSON.stringify(pre.json)}`);
-  if (pre.json.already) console.error('[pireel-import] bytes already in cloud (dedup hit), skipping upload');
-  else {
-    console.error('[pireel-import] uploading…');
-    const put = await fetch(pre.json.url, {
-      method: 'PUT',
-      headers: { 'Content-Type': pre.json.content_type ?? contentType, 'Cache-Control': 'public, max-age=2592000, immutable' },
-      body: await openAsBlob(path, { type: contentType }),
-      duplex: 'half',
-    });
-    if (!put.ok) fail(`upload failed: HTTP ${put.status}`);
-  }
-
-  // 2) Probe metadata (optional)
   const meta = bins.ffprobe ? probe(bins.ffprobe, path) : null;
   if (!meta) console.error('[pireel-import] ffprobe unavailable — duration/dims unknown (browser will complete them on open)');
 
-  // --broll: bytes only — no transcription, no project registration. The agent inserts
-  // it into the timeline afterwards with the insert_clip MCP tool (pass this sig).
+  // --broll: bytes only, still via the cloud (insert_clip fetches them from R2 later, possibly
+  // in a different session). No transcription, no project registration.
   if (has('broll')) {
+    const pre = await media({ action: 'put', sig, size: st.size, content_type: contentType });
+    if (!pre.ok) fail(`presign failed (HTTP ${pre.status}): ${JSON.stringify(pre.json)}`);
+    if (pre.json.already) console.error('[pireel-import] bytes already in cloud (dedup hit), skipping upload');
+    else {
+      console.error('[pireel-import] uploading b-roll…');
+      const put = await fetch(pre.json.url, {
+        method: 'PUT',
+        headers: { 'Content-Type': pre.json.content_type ?? contentType, 'Cache-Control': 'public, max-age=2592000, immutable' },
+        body: await openAsBlob(path, { type: contentType }),
+        duplex: 'half',
+      });
+      if (!put.ok) fail(`upload failed: HTTP ${put.status}`);
+    }
     console.error('[pireel-import] b-roll upload done — insert with the insert_clip MCP tool');
     return { file: basename(path), kind: 'broll', sig, ...(meta?.durationSec ? { duration_sec: meta.durationSec } : {}), next: 'call insert_clip {sig, atSec?} (needs the studio tab open)' };
   }
 
-  // 3) Extract audio → upload → server-side transcription (optional; timestamps offset-corrected)
-  let transcript = [];
-  if (bins.ffmpeg && (meta?.hasAudio ?? true) && !has('no-transcribe')) {
-    const tmp = join(tmpdir(), `pireel-audio-${Date.now()}.m4a`);
-    const r = spawnSync(bins.ffmpeg, ['-y', '-v', 'quiet', '-i', path, '-vn', '-acodec', 'aac', '-b:a', '64k', tmp], { stdio: 'ignore' });
-    if (r.status === 0) {
-      try {
-        console.error('[pireel-import] transcribing…');
-        const audio = await readFile(tmp);
-        const preA = await media({ action: 'put-audio', size: audio.byteLength });
-        if (preA.ok && preA.json.url) {
-          const putA = await fetch(preA.json.url, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'audio/mp4', 'Cache-Control': 'public, max-age=2592000, immutable' },
-            body: audio,
-          });
-          if (putA.ok) {
-            const asr = await media({ action: 'asr', audio_key: preA.json.key });
-            const off = meta?.audioOffset ?? 0;
-            transcript = (asr.json.segments ?? [])
-              .filter((s) => s.text?.trim())
-              .map((s) => ({ start: Math.max(0, s.start + off), end: Math.max(s.start + off + 0.1, s.end + off), text: s.text.trim() }));
-            console.error(`[pireel-import] transcript: ${transcript.length} sentences`);
-          }
-        }
-      } finally {
-        await unlink(tmp).catch(() => {});
+  // Main video: LOCAL fast path — no cloud upload. Serve the file from a throwaway localhost
+  // server; register-local pushes it straight into the open tab (bytes stream over 127.0.0.1).
+  // The small audio still goes to R2 for transcription (DashScope needs a public URL).
+  const server = await startLocalServer(path, contentType);
+  try {
+    const transcript = await transcribe(path, meta, bins);
+    console.error('[pireel-import] handing the video to the open studio tab…');
+    const reg = await media({
+      action: 'register-local',
+      sig,
+      local_url: server.url,
+      filename: basename(path),
+      ...(meta?.durationSec ? { duration_sec: meta.durationSec } : {}),
+      ...(meta?.width ? { width: meta.width } : {}),
+      ...(meta?.height ? { height: meta.height } : {}),
+      ...(transcript.length ? { transcript_segments: transcript } : {}),
+    });
+    if (!reg.ok || !reg.json.ok) {
+      if (reg.json.error === 'studio_not_open') {
+        fail(
+          'the studio tab is not open. The video streams straight into the studio over your machine (no cloud), so a tab has to be open. ' +
+            'Open it (call create_browser_handoff and open the url with your own browser, or ask the user to open the project), then re-run this import.',
+        );
       }
-    } else console.error('[pireel-import] audio extraction failed — importing without transcript');
+      fail(`register failed: ${reg.json.error ?? `HTTP ${reg.status}`}`);
+    }
+    return { file: basename(path), sig, ...reg.json.data, transcript: transcript.length, probed: !!meta, delivery: 'local' };
+  } finally {
+    await server.close();
   }
-
-  // 4) Register on a project (projects with existing footage are never clobbered)
-  const reg = await media({
-    action: 'register',
-    sig,
-    filename: basename(path),
-    ...(meta?.durationSec ? { duration_sec: meta.durationSec } : {}),
-    ...(meta?.width ? { width: meta.width } : {}),
-    ...(meta?.height ? { height: meta.height } : {}),
-    ...(transcript.length ? { transcript_segments: transcript } : {}),
-  });
-  if (!reg.ok || !reg.json.ok) fail(`register failed: ${reg.json.error ?? `HTTP ${reg.status}`}`);
-  return { file: basename(path), sig, ...reg.json.data, transcript: transcript.length, probed: !!meta };
 }
 
 const bins = { ffprobe: resolveBin('ffprobe', 'ffprobe', 'FFPROBE_PATH'), ffmpeg: resolveBin('ffmpeg', 'ffmpeg', 'FFMPEG_PATH') };
