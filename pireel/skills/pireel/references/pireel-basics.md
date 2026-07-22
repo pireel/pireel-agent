@@ -82,7 +82,7 @@ When the user points at a LOCAL video file path, load the `asset-import` skill �
 ## Seeing and offline mode
 
 - `capture_frame {atSec}` renders one frame (video + framing + overlays) as an image — your eyes. Verify visual work after `apply_block`, caption, or framing changes, then fix what looks wrong. Needs the studio tab open.
-- When the tab is closed, data-level tools (cuts, block edits, captions, BYO compose/apply, plan) run in OFFLINE MODE against the user's most recently updated cloud project (results carry `offline: true`); video-dependent tools (`extract_asr`, `visual_brief`, `analyze_visual`, `capture_frame`, `lay_out`, `export_video`, Pireel-LLM generation) need the tab — open one yourself with `create_browser_handoff` (built-in browser) before falling back to asking the user.
+- When the tab is closed, data-level tools (cuts, block edits, captions, BYO compose/apply, plan) can run in OFFLINE MODE against the user's most recently updated cloud project (results carry `offline: true`). MUTATING tools refuse offline with `offline_confirm_required` unless you pass `confirm_offline: true` — blind editing must be deliberate: open the editor first (`create_browser_handoff`, built-in browser) or ask the user before confirming; never silently cut a whole video offline and offer a preview afterwards. Video-dependent tools (`extract_asr`, `visual_brief`, `analyze_visual`, `capture_frame`, `lay_out`, `export_video`, Pireel-LLM generation) always need the tab.
 
 ## When to ask the user instead of acting
 
