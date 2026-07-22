@@ -42,4 +42,4 @@ Agent orchestration and every BYO flow run on the user's own agent subscription,
 
 ## Skill version
 
-`2026-07-21.4`. On connect, the Pireel MCP server announces its current skill baseline in its instructions. The format is `YYYY-MM-DD.rev` — compare the date first, then the numeric `.rev` (e.g. `2026-07-21.3` is newer than `2026-07-21.2`; a bare `2026-07-21` counts as `.0`). If the server's baseline is **newer** than the version above, tell the user once to update the skill: `npx skills update pireel` (or re-run `npx skills add pireel/pireel-agent`). Don't nag if they match.
+`2026-07-22.1`. On connect, the Pireel MCP server announces its current skill baseline in its instructions. The format is `YYYY-MM-DD.rev` — compare the date first, then the numeric `.rev` (e.g. `2026-07-21.3` is newer than `2026-07-21.2`; a bare `2026-07-21` counts as `.0`). If the server's baseline is **newer** than the version above, tell the user once to update the skill: `npx skills update pireel` (or re-run `npx skills add pireel/pireel-agent`). Don't nag if they match.
