@@ -7,6 +7,22 @@ description: Use when a Pireel Studio workflow needs export, render, download, s
 
 Pireel exports render **locally in the user's open studio tab** (WebCodecs client compositing) and the file is saved straight to the user's machine via the **browser's download** — nothing is uploaded, there is no cloud render queue and no download URL. The flow is `export_video` to start, `track_export` to poll, then locate the downloaded file.
 
+## Driving a headless/embedded browser? Use the sink (REQUIRED)
+
+A page download is only a hand-off to the browser — **headless and agent-embedded browsers routinely discard it silently**: `track_export` reports done, but no file lands anywhere. When the studio tab is a browser YOU drive (create_browser_handoff into your own browser tool), always deliver through the local sink instead:
+
+1. Start the receiver (blocks until the file arrives; run it in the background):
+
+```bash
+node scripts/export-sink.mjs --out ~/Videos &
+# first stdout line: {"sink_url":"http://127.0.0.1:PORT/…","out_dir":…}
+```
+
+2. Call `export_video` with that URL: `{ "resolution": 1080, "sink_url": "http://127.0.0.1:PORT/…" }`.
+3. Poll `track_export` as usual. On done it reports `saved_via: local sink`; the sink process prints `{"saved": "/abs/path", …}` and exits — that's the deliverable's absolute path.
+
+The sink is loopback-only, single-use, and needs no token (it never talks to the Pireel API). Bytes stay on this machine. If the sink PUT fails, the tab falls back to the browser download and `track_export` carries `sink_error` — restart a fresh sink and re-export (unchanged content re-delivers instantly from cache).
+
 ## Flow
 
 1. Call `export_video` with the options the user asked for (all optional):
