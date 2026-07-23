@@ -16,14 +16,6 @@ npx skills add pireel/pireel-agent
 
 This installs a **single `pireel` skill** (its detailed playbooks are bundled as on-demand `references/`, so your skills list stays clean — one entry, not ten). Then tell your agent **"set up Pireel"** — the skill registers the MCP server, drives the OAuth login, and imports your first video.
 
-### Codex (plugin marketplace)
-
-```bash
-codex plugin marketplace add https://github.com/pireel/pireel-agent
-codex plugin install pireel
-codex mcp login pireel   # OAuth in your browser
-```
-
 ### Claude Code (MCP only)
 
 ```bash
@@ -34,7 +26,7 @@ Claude Code prompts for OAuth on first use. For the `pireel` skill, use `npx ski
 
 ## Update
 
-Run `npx skills update pireel` (or re-run `npx skills add pireel/pireel-agent`); Codex users can update via their plugin marketplace. There's also a built-in nudge: on connect the Pireel MCP server announces its current skill baseline, so if your installed skill is older, the agent tells you to update.
+Run `npx skills update pireel` (or re-run `npx skills add pireel/pireel-agent`). There's also a built-in nudge: on connect the Pireel MCP server announces its current skill baseline, so if your installed skill is older, the agent tells you to update.
 
 ## Verify
 
