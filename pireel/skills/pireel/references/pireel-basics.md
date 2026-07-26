@@ -54,16 +54,20 @@ Four tools run **Pireel's own LLM and charge the account's credits**: `add_block
 | What's on the timeline? | `get_state` |
 | What does the speaker say? | `read_script` (main narration + inserted clips; `extract_asr` if no transcript yet) |
 | Move / retime an overlay | `move_block`, `resize_block` |
+| Reposition / resize an overlay ON SCREEN (into a corner, off the speaker's face) | `place_block` (anchor or % coords; each block's current zone shows in `get_state`) |
 | Remove overlays | `delete_block`, `delete_blocks` (several in one call) |
 | Copy an overlay | `duplicate_block` |
 | Inspect a block's actual HTML/animation | `get_block` (before precise edits or content questions) |
 | Show the user an element | `focus_element` (after creating/changing something) |
 | New graphic / rewrite a graphic | `compose_block_brief` → generate → `apply_block` (fallback: `add_block` / `edit_block`, burns credits) |
 | Video framing / zoom | `set_shot_treatment` |
+| Color-grade a shot | `set_video_filter` (brightness/contrast/saturate, 1 = untouched) |
+| What media has the user uploaded? | `list_assets` (works with the tab closed; use its urls for block images / `insert_clip`) |
 | Cut video at a point / trim an end | `split_shot`, `trim_shot` |
 | Remove a whole shot | `delete_shot` |
 | Remove an edited-timeline range (or inside a `[clip X]`) | `cut_range` |
 | Remove spoken passages by the script | `cut_narration` (source-second ranges, ONE call for all ranges) |
+| Tighten pacing / remove dead air | `cut_narration` with full gap ranges + `keepGapSec` (0.35 default) — rules in the `talking-head-cleanup` skill |
 | Judgment-based speech cleanup (fillers, retakes, tighten) | `read_editing_guide` once, then its workflow — or use the `talking-head-cleanup` skill directly |
 | Subtitles on/off/restyle | `set_captions` (18 presets), `remove_captions` — see the `captions` skill |
 | Themes | `list_frames` → `attach_frame` → `read_frame {frame_id}` |
