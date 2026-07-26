@@ -62,6 +62,7 @@ Four tools run **Pireel's own LLM and charge the account's credits**: `add_block
 | New graphic / rewrite a graphic | `compose_block_brief` → generate → `apply_block` (fallback: `add_block` / `edit_block`, burns credits) |
 | Video framing / zoom | `set_shot_treatment` |
 | Color-grade a shot | `set_video_filter` (brightness/contrast/saturate, 1 = untouched) |
+| Shot sound — quiet or mute a shot's own audio (e.g. B-roll under narration) | `set_shot_audio` (`volumeDb` -60..0 and/or `mute`; batch via `shotIds`/`all:true`) |
 | What media has the user uploaded? | `list_assets` (works with the tab closed; use its urls for block images / `insert_clip`) |
 | Cut video at a point / trim an end | `split_shot`, `trim_shot` |
 | Remove a whole shot | `delete_shot` |

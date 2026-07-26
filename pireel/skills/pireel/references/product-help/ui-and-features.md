@@ -24,6 +24,7 @@ Vocabulary first — use the user's terms, not internal ones: **组件** (compon
 - Add a graphic → ask the agent (BYO compose), or 素材 tab → 组件 → insert; empty component cards offer AI-generate / upload actions.
 - Change how the video is framed in a scene → select the scene card → 取景 button (or the framing badge on the card).
 - Color-grade a scene (brightness/contrast/saturation) → same 取景 window, 画面调色 sliders (100 = untouched; per scene, or ask the agent: set_video_filter).
+- Shot sound (volume/mute of a scene's own audio, e.g. quiet a B-roll insert) → same 取景 window, 声音 section (volume 0–100% of source level + mute toggle; per scene, or ask the agent: set_shot_audio with volumeDb -60..0 / mute).
 - Add B-roll → hover a scene card's edge → the「+」button (or ask the agent: insert_clip after uploading).
 - Transitions (true dual-stream, rendered by the gl-transitions shaders) → click the narrow band on any cut between scene cards → pick an effect card in the docked panel (无/叠化/渐黑/推移/划开/圆形/百叶窗/变焦/旋转/故障/波浪; hover a card to watch it play on two photos; 推移/划开 have a direction picker). Once set, an accent region straddles the cut on the main track — drag its side handles to adjust length (symmetric around the cut, max 4s); you can't split inside it, and deleting either adjacent scene clears it. Or ask the agent (add_transition).
 - Clean up the speech → 智能剪口播 (word-level: click a word to delete/replace, batch-remove fillers and silences).
