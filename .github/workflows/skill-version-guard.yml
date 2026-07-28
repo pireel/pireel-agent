@@ -1,0 +1,43 @@
+name: skill version guard
+
+# The pireel skill self-updates through a version handshake: the MCP server
+# announces a baseline and clients compare it against the "Skill version"
+# footer in SKILL.md. If skill content changes without a version bump,
+# installed clients silently keep the stale copy. This guard fails any push
+# or PR that edits the skill tree without touching the version line.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: skill changes must bump the version
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+          # New branch or force-push sentinel: nothing to compare against.
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            echo "No comparable base commit; skipping."
+            exit 0
+          fi
+          if git diff --quiet "$BASE" HEAD -- pireel/skills/; then
+            echo "Skill tree unchanged; ok."
+            exit 0
+          fi
+          if git diff "$BASE" HEAD -- pireel/skills/pireel/SKILL.md | grep -qE '^\+`[0-9]{4}-[0-9]{2}-[0-9]{2}\.[0-9]+`\.'; then
+            echo "Skill tree changed and version bumped; ok."
+            exit 0
+          fi
+          echo "::error::pireel/skills/ changed but the Skill version line in SKILL.md did not."
+          echo "Bump the version footer (YYYY-MM-DD.rev) and the server baseline together."
+          exit 1
