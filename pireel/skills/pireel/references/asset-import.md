@@ -1,6 +1,6 @@
 ---
 name: asset-import
-description: Use when the user points at a LOCAL video or image file (a path like /Users/..., C:\..., or a chat attachment materialized as a file) that should be used in Pireel Studio. Covers streaming local source video straight into the OPEN Studio tab over the user's machine (no cloud upload), registering it on a project, optional metadata probing and transcription via ffmpeg/ffprobe, and when the studio tab must be open.
+description: Use when the user points at a LOCAL video, image or audio file (a path like /Users/..., C:\..., or a chat attachment materialized as a file) that should be used in Pireel Studio. Covers streaming local source video straight into the OPEN Studio tab over the user's machine (no cloud upload), registering it on a project, optional metadata probing and transcription via ffmpeg/ffprobe, and when the studio tab must be open.
 ---
 
 # Asset Import — local video into Pireel
@@ -17,6 +17,7 @@ This is the authoritative statement — tool descriptions and other references m
 | Transcription audio | a small AAC is uploaded to the cloud (Pireel's transcription needs a URL it can fetch) |
 | B-roll (`--broll`) | uploaded to the cloud (`insert_clip` fetches it later, possibly in another session) |
 | Images | uploaded to the cloud asset library, or inlined as a data URI |
+| Audio (music/SFX) | uploaded to the cloud asset library (`set_bgm` places it on the music lane) |
 
 **Because the main video streams straight into the browser, a Studio tab MUST be open before you import it.** If none is, the helper exits with `studio_not_open` — open one (call `create_browser_handoff` and open the URL in your own in-app browser, or ask the user to open the project) and re-run the helper. There is no cloud fallback for the main video.
 
@@ -79,6 +80,18 @@ Two routes, picked by what the deployment has — the goal is the user's local i
 
 - `url_kind: "public"` — a stable public/CDN link came back: safe to bake into blocks. (Hosted pireel.com always does this.)
 - `url_kind: "none"` — the deployment has storage but no public media base: the bytes are stored and visible in the asset library, but there is no stable URL to bake into blocks. Fall back to the data-URI route for the block itself, or tell the user to configure a public media base.
+
+## Audio (music / sound effects)
+
+A local audio file (`.mp3`/`.m4a`/`.aac`/`.wav`/`.flac`/`.ogg`, ≤ 200MB) passed to the same helper goes to the asset library and comes back with a `url`:
+
+```
+node import-media.mjs --token … /path/to/track.mp3
+```
+
+Then place it with `set_bgm {url, startSec?}` — the level auto-balances against the measured narration loudness, and the receipt returns a `trackId` for later adjustments (volume, fades, speed, mute, `headSec`/`tailSec` trims, `splitAtSec`). It needs the studio tab open: the bytes are fetched into the browser, which is also what makes them survive later sessions.
+
+Nothing is transcribed or probed for a timeline here — an audio asset is something you place, not footage to cut. Music the user already owns is in `list_assets {kind: "audio"}`; bring your own file only when they point at one.
 
 ## B-roll (insert a clip into the timeline)
 

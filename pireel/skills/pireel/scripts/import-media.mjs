@@ -9,7 +9,8 @@
  * audio goes to R2 (transcription needs a public URL DashScope can fetch).
  * B-roll (--broll): still uploaded to the cloud (insert_clip fetches it later, maybe in
  * another session). Images (png/jpg/webp/gif): uploaded to the user's asset library and
- * return a reference URL usable in composed blocks (<img src>).
+ * return a reference URL usable in composed blocks (<img src>). Audio (mp3/m4a/wav/flac/
+ * ogg): same route as images — into the asset library, returns a url for set_bgm.
  * Metadata probing (ffprobe) + audio transcription (ffmpeg) are optional.
  *
  * Usage (normal flow — the agent gets `token` from the `import_media` MCP tool):
@@ -54,6 +55,7 @@ const TRANSFER_MATRIX = [
   'Transcription audio: a small AAC is uploaded to the cloud (transcription needs a fetchable URL)',
   'B-roll (--broll):    uploaded to the cloud (insert_clip fetches it later)',
   'Images:              uploaded to the cloud asset library (or inlined as a data URI)',
+  'Audio:               uploaded to the cloud asset library (set_bgm places it on the music lane)',
   'Requires a Studio tab OPEN for the main video (bytes stream into it). No cloud fallback for it.',
 ];
 if (has('explain')) {
@@ -144,6 +146,7 @@ async function startLocalServer(path, contentType) {
 }
 
 const IMAGE_MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' };
+const AUDIO_MIME = { mp3: 'audio/mpeg', m4a: 'audio/mp4', aac: 'audio/aac', wav: 'audio/wav', flac: 'audio/flac', ogg: 'audio/ogg', opus: 'audio/ogg', weba: 'audio/webm' };
 
 /** Image → user asset library. Returns a reference URL for composed blocks (<img src>)
  *  when the deployment has a public media base; otherwise url is null (inline small
@@ -173,6 +176,39 @@ async function importImage(path, bins) {
   if (reg.json.url) console.error('[pireel-import] image in asset library · stable public url');
   else console.error('[pireel-import] image stored, but no public media base — inline it as a data URI in block HTML instead');
   return { file: basename(path), kind: 'image', key: reg.json.key, url: reg.json.url, url_kind: reg.json.url_kind };
+}
+
+/** Music / SFX → user asset library. Same two-step as images (presign → PUT → register); the
+ *  returned url is what set_bgm takes. Nothing here is transcribed or probed for a timeline:
+ *  an audio asset is a thing you place, not footage you cut. */
+async function importAudio(path, bins) {
+  const st = await stat(path);
+  const ext = path.toLowerCase().match(/\.(mp3|m4a|aac|wav|flac|ogg|opus|weba)$/)?.[1] ?? '';
+  const mime = AUDIO_MIME[ext];
+  const meta = bins.ffprobe ? probe(bins.ffprobe, path) : null;
+  console.error(`[pireel-import] ${basename(path)} · audio · ${(st.size / 1048576).toFixed(1)}MB${meta?.durationSec ? ` · ${meta.durationSec.toFixed(1)}s` : ''}`);
+  const pre = await media({ action: 'put-audio-asset', size: st.size, content_type: mime });
+  if (!pre.ok) fail(`audio presign failed (HTTP ${pre.status}): ${JSON.stringify(pre.json)}`);
+  const put = await fetch(pre.json.url, {
+    method: 'PUT',
+    headers: { 'Content-Type': mime, 'Cache-Control': pre.json.cache_control ?? 'public, max-age=2592000, immutable' },
+    body: await openAsBlob(path, { type: mime }),
+    duplex: 'half',
+  });
+  if (!put.ok) fail(`audio upload failed: HTTP ${put.status}`);
+  const reg = await media({ action: 'register-audio-asset', key: pre.json.key, label: basename(path) });
+  if (!reg.ok || !reg.json.ok) fail(`audio register failed: ${reg.json.error ?? `HTTP ${reg.status}`}`);
+  if (reg.json.url) console.error('[pireel-import] audio in asset library — place it with set_bgm {url}');
+  else console.error('[pireel-import] audio stored, but no public media base — set_bgm cannot fetch it; configure a public media base');
+  return {
+    file: basename(path),
+    kind: 'audio',
+    key: reg.json.key,
+    url: reg.json.url,
+    url_kind: reg.json.url_kind,
+    ...(meta?.durationSec ? { duration_sec: meta.durationSec } : {}),
+    next: 'call set_bgm {url, startSec?} (needs the studio tab open)',
+  };
 }
 
 /** Extract audio → upload the small audio to R2 → server-side transcription (ASR needs a
@@ -276,5 +312,9 @@ if (!bins.ffmpeg || !bins.ffprobe) {
 }
 console.error('[pireel-import] data paths:\n' + TRANSFER_MATRIX.map((l) => `  ${l}`).join('\n'));
 const out = [];
-for (const f of files) out.push(/\.(png|jpe?g|webp|gif)$/i.test(f) ? await importImage(f, bins) : await importOne(f, bins));
+for (const f of files) {
+  if (/\.(png|jpe?g|webp|gif)$/i.test(f)) out.push(await importImage(f, bins));
+  else if (/\.(mp3|m4a|aac|wav|flac|ogg|opus|weba)$/i.test(f)) out.push(await importAudio(f, bins));
+  else out.push(await importOne(f, bins));
+}
 console.log(JSON.stringify({ imports: out }, null, 2));
