@@ -33,7 +33,7 @@ Fallback: `analyze_visual` runs Pireel's hosted vision model and CHARGES the acc
 This is BYO-brain: **you** are the planner, not Pireel's LLM.
 
 1. `plan_brief` (no input; requires the transcript, so run `extract_asr` first) returns the full planning contract `{system, prompt}`: transcript sentences, per-sentence visual hints, inserted-clip context.
-2. Generate the **DraftPlan JSON** yourself, following the contract exactly — scene segmentation (group consecutive sentences by meaning), a framing per scene (full / punch-in / corner / split), and a designed-graphic brief per scene with real data pulled from the script. Designed graphics are the main event.
+2. Generate the **DraftPlan JSON** yourself, following the contract exactly — scene segmentation (group consecutive sentences by meaning), a framing per scene (full / punch-in / corner / split; the split axis and the corner-vs-split preference follow the canvas orientation, and the contract states them), and a designed-graphic brief per scene with real data pulled from the script. Designed graphics are the main event.
 3. `submit_plan {plan}` (JSON object or its raw text). It is coerced and validated — scene ranges are clamped to the sentence count. If it is rejected because no scenes survive validation, regenerate against the contract and resubmit.
 
 Fallback only: `analyze_narration` does this planning on Pireel's LLM and **charges the account's credits** — use it only if the BYO plan fails repeatedly.

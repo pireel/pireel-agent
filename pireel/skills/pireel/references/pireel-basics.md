@@ -19,7 +19,7 @@ The MCP endpoint is `https://pireel.com/api/studio/mcp`. Auth is OAuth — the a
 ## The composition: two kinds of elements
 
 - **Overlay blocks** — designed graphic fragments laid over the video: metric cards, comparisons, charts, flow/structure diagrams, KPIs, callouts, titles. Designed graphics are the main event of a Pireel video. Blocks marked `待配图` in state are **placeholders**: empty slots dropped by `lay_out`, waiting to be filled with a generated graphic.
-- **Video shots** — segments of the talking-head clip, each with a framing *treatment*: `full` (full screen), `punch-in` (zoom for emphasis), `corner-br` / `corner-tl` (shrink to a corner to make room for graphics), `split-l` / `split-r` (video takes one half, graphics take the other). Shot boundaries are hard jump cuts; visual variety comes from framing changes, not transitions.
+- **Video shots** — segments of the talking-head clip, each with a framing *treatment*: `full` (full screen), `punch-in` (zoom for emphasis), `corner-br` / `corner-tl` (shrink to a corner to make room for graphics), `split-l` / `split-r` / `split-t` / `split-b` (video takes that half, graphics take the other — the split axis follows the canvas: portrait splits top/bottom, landscape splits left/right; when making room, portrait prefers a split first, landscape a corner first). Shot boundaries are hard jump cuts; visual variety comes from framing changes, not transitions.
 
 ## The two clocks (get this wrong and cuts land in the wrong place)
 

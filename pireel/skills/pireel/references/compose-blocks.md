@@ -25,20 +25,22 @@ Returns the FULL generation contract `{system, prompt}`, assembled live from the
 
 ## Step 2 — generate, following the contract exactly
 
-Adopt the returned `system` and `prompt` verbatim and produce the response in the exact expected shape:
+Adopt the returned `system` and `prompt` verbatim. **The contract's shape follows the project** — read the brief's OUTPUT section, don't assume:
 
-1. **One short note** (a sentence about what you built),
-2. a **```html fence** with the block's markup and scoped styles,
-3. a **```js fence** with the deterministic animation timeline.
+- **Themed project** (a frame is attached) → free-form markup:
+  1. **One short note** (a sentence about what you built),
+  2. a **```html fence** with the block's markup and scoped styles,
+  3. a **```js fence** with the deterministic animation timeline.
+- **Themeless project** (no frame) → a component choice: **one ```json fence** and nothing else, either `{"component": "<id from the brief's catalogue>", "props": {...}}`, or `{"custom": true}` when no listed component carries the content (then call `compose_block_brief` again with `format: "html"` to get the free-form contract and build it by hand), or `null` when the moment genuinely deserves no graphic (a batch fill drops that placeholder — this is a real answer, not a failure).
 
 Follow every rule in the contract — sizing, tokens, allowed CSS, animation constraints. Two contract-level facts worth pinning:
 
 - The contract references a `get_icons` tool: **it exists on this MCP server**. Call `get_icons {names}` for inline SVG icons (up to 8 lucide-style kebab-case names, e.g. `["trending-up","shield-check"]`; `kind: "brand"` for brand logos). Never hand-draw semantic icons, never put emoji on canvas.
-- If a **frame** (theme content pack) is attached, its design language is already baked into the brief — but when YOU are planning what blocks to make, read the playbook first: `read_frame {frame_id}` (ids via `list_frames`; attach with `attach_frame`). Call `read_frame` once after attaching and carry its motifs, proportions, and voice into every instruction you write. Do not copy the playbook's absolute px values — they are written for a different (1920px landscape) preview reference; the brief's own sizing rules govern actual px.
+- If a **frame** (theme content pack) is attached, its design language is already baked into the brief — but when YOU are planning what blocks to make, read the playbook first: `read_frame {frame_id}` (ids via `list_frames`; attach with `attach_frame`). Call `read_frame` once after attaching and carry its character, palette semantics, layout language and taboos into every instruction you write; the brief's own sizing rules govern actual dimensions.
 
 ## Step 3 — submit: `apply_block`
 
-Pass the **same `blockId` / `atSec` you gave the brief**, and `raw` = your full generated text (note + ```html + ```js; the fences are parsed out). Behavior by target:
+Pass the **same `blockId` / `atSec` you gave the brief**, and `raw` = your full generated text exactly as the contract shaped it (note + ```html + ```js on the themed path; the single ```json fence on the themeless path — the fences are parsed out). Behavior by target:
 
 - Placeholder `blockId` → fills it.
 - Existing `blockId` → overwrites its content.

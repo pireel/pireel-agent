@@ -75,7 +75,7 @@ Notes:
 
 ## Position and size
 
-- Default placement is fine for most videos; adjust when captions collide with graphics or the speaker's face (check shot treatments — `split-l/r` and corner framings change where free space is).
+- Default placement is fine for most videos; adjust when captions collide with graphics or the speaker's face (check shot treatments — `split-*` and corner framings change where free space is).
 - "Higher/lower" → nudge `yPct` (smaller = higher). "Bigger/smaller" → `scale` around 1 (e.g. 1.15 / 0.85). These are independent of the preset and of each other.
 
 ## Recovery
