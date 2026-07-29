@@ -1,10 +1,11 @@
 name: skill version guard
 
 # The pireel skill self-updates through a version handshake: the MCP server
-# announces a baseline and clients compare it against the "Skill version"
-# footer in SKILL.md. If skill content changes without a version bump,
+# announces a baseline and clients compare it against the VERSION file that
+# ships next to SKILL.md. If skill content changes without a version bump,
 # installed clients silently keep the stale copy. This guard fails any push
-# or PR that edits the skill tree without touching the version line.
+# or PR that edits the skill tree without touching VERSION (or leaves it in
+# a shape clients can't compare).
 
 on:
   push:
@@ -30,14 +31,21 @@ jobs:
             echo "No comparable base commit; skipping."
             exit 0
           fi
+          VERSION_FILE="pireel/skills/pireel/VERSION"
+          # The tag is opaque (clients update on mismatch, not ordering) — the only shape
+          # requirement is one clean token; the real invariant is that it CHANGES per release.
+          if [ "$(wc -l < "$VERSION_FILE")" -gt 1 ] || ! grep -qE '^[^[:space:]]{1,64}$' "$VERSION_FILE"; then
+            echo "::error::$VERSION_FILE must be a single non-empty token line."
+            exit 1
+          fi
           if git diff --quiet "$BASE" HEAD -- pireel/skills/; then
             echo "Skill tree unchanged; ok."
             exit 0
           fi
-          if git diff "$BASE" HEAD -- pireel/skills/pireel/SKILL.md | grep -qE '^\+`[0-9]{4}-[0-9]{2}-[0-9]{2}\.[0-9]+`\.'; then
-            echo "Skill tree changed and version bumped; ok."
+          if ! git diff --quiet "$BASE" HEAD -- "$VERSION_FILE"; then
+            echo "Skill tree changed and VERSION changed; ok."
             exit 0
           fi
-          echo "::error::pireel/skills/ changed but the Skill version line in SKILL.md did not."
-          echo "Bump the version footer (YYYY-MM-DD.rev) and the server baseline together."
+          echo "::error::pireel/skills/ changed but $VERSION_FILE did not."
+          echo "Give it a new distinct value — the server baseline derives from the same file."
           exit 1
