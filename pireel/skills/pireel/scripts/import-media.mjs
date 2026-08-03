@@ -33,6 +33,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import { openAsBlob, createReadStream } from 'node:fs';
 import { stat, readFile, unlink } from 'node:fs/promises';
@@ -64,6 +65,7 @@ if (has('explain')) {
 }
 
 const BASE = (opt('base') ?? process.env.PIREEL_BASE ?? 'https://pireel.com').replace(/\/$/, '');
+const STUDIO_ORIGIN = new URL(BASE).origin;
 const CRED = opt('token');
 if (!CRED) fail('missing credential: pass --token <import token from the import_media MCP tool>');
 if (!files.length) fail('no input files. usage: node import-media.mjs --token … /path/to/video.mp4');
@@ -119,9 +121,9 @@ async function media(body) {
  */
 async function startLocalServer(path, contentType) {
   const st = await stat(path);
-  const routePath = `/${Math.random().toString(36).slice(2)}`;
+  const routePath = `/${randomBytes(24).toString('base64url')}`;
   const cors = {
-    'Access-Control-Allow-Origin': BASE,
+    'Access-Control-Allow-Origin': STUDIO_ORIGIN,
     'Access-Control-Allow-Private-Network': 'true',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': '*',
@@ -131,9 +133,13 @@ async function startLocalServer(path, contentType) {
   // responses that lack one with ERR_BLOCKED_BY_CLIENT (see openai/codex#30687), including the
   // CORS/PNA preflight — so the OPTIONS and 404 replies set it too, not just the 200.
   const TEXT = 'text/plain; charset=utf-8';
+  let consumed = false;
   const server = createServer((req, res) => {
+    if (req.headers.origin !== STUDIO_ORIGIN) return void res.writeHead(403, { ...cors, 'Content-Type': TEXT }).end('forbidden');
     if (req.method === 'OPTIONS') return void res.writeHead(204, { ...cors, 'Content-Type': TEXT }).end();
     if (req.method !== 'GET' || req.url !== routePath) return void res.writeHead(404, { ...cors, 'Content-Type': TEXT }).end('not found');
+    if (consumed) return void res.writeHead(410, { ...cors, 'Content-Type': TEXT }).end('gone');
+    consumed = true;
     res.writeHead(200, { ...cors, 'Content-Type': contentType, 'Content-Length': String(st.size), 'Cache-Control': 'no-store' });
     createReadStream(path).pipe(res);
   });

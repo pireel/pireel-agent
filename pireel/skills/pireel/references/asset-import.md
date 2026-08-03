@@ -33,6 +33,11 @@ await tab.playwright.setInputFiles('[data-pireel-video-input]', '/absolute/path/
 
 The studio reads the file locally into its OPFS library and makes it the main video — nothing is uploaded. Then transcribe with the `extract_asr` MCP tool (it runs in the tab; note this route skips the helper's ffprobe/transcript step). If `setInputFiles` isn't available, catch the file chooser instead: `tab.playwright.waitForEvent('filechooser')` then `chooser.setFiles(path)` around a click on the input.
 
+Both routes converge after the bytes enter the tab: the same local import session classifies the
+media, persists it to OPFS, and writes the same metadata-only `localAssets` project index used by
+the Studio picker. Skill imports therefore appear in the same local asset list and participate in
+the same deletion sync and cross-browser “restore access” guidance; only the source adapter differs.
+
 ## The helper
 
 `../scripts/import-media.mjs` (relative to this reference — the `pireel` skill's `scripts/` dir). Node ≥ 20, zero npm dependencies. For a main video it:
