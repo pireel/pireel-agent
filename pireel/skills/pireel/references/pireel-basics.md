@@ -65,11 +65,13 @@ Four tools run **Pireel's own LLM and charge the account's credits**: `add_block
 | Shot sound — quiet or mute a shot's own audio (e.g. B-roll under narration) | `set_shot_audio` (`volumeDb` -60..0 and/or `mute`; batch via `shotIds`/`all:true`) |
 | Find a described reusable asset (name/category/mood/use case) | `search_assets` across `mine` / `cloud` / `official` (works with the tab closed; use returned locators, never invent a URL) |
 | What media has the user uploaded? | `list_assets` (works with the tab closed; use its urls for block images / `insert_clip`) |
-| Find a spoken topic or visual moment inside this project's video sources | `search_media` (stable source-clock segments; this is not the reusable asset library or web search) |
+| Find a spoken topic already present in the current `read_script` / `extract_asr` result | Reason over the numbered transcript rows directly; do not call a lexical search tool |
+| Retrieve a spoken/visual moment missing from current context (cold/truncated transcript, multiple sources, visual labels) | `search_media` (stable source-clock segments; this is not the reusable asset library or web search) |
 | Cut video at a point / trim an end | `split_shot`, `trim_shot` |
 | Remove a whole shot | `delete_shot` |
 | Remove an edited-timeline range (or inside a `[clip X]`) | `cut_range` |
 | Remove spoken passages by the script | `cut_narration` (source-second ranges, ONE call for all ranges) |
+| Remove exact words inside an identified transcript passage | Choose rows/range from `read_script` → one narrowed `list_words` call → `delete_words`; never scan the whole transcript with `list_words` |
 | Tighten pacing / remove dead air | `cut_narration` with full gap ranges + `keepGapSec` (0.35 default) — rules in the `talking-head-cleanup` skill |
 | Judgment-based speech cleanup (fillers, retakes, tighten) | `read_editing_guide` once, then its workflow — or use the `talking-head-cleanup` skill directly |
 | Subtitles on/off/restyle | `set_captions` (18 presets), `remove_captions` — see the `captions` skill |
