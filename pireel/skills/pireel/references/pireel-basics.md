@@ -63,7 +63,9 @@ Four tools run **Pireel's own LLM and charge the account's credits**: `add_block
 | Video framing / zoom | `set_shot_treatment` |
 | Color-grade a shot | `set_video_filter` (brightness/contrast/saturate, 1 = untouched) |
 | Shot sound — quiet or mute a shot's own audio (e.g. B-roll under narration) | `set_shot_audio` (`volumeDb` -60..0 and/or `mute`; batch via `shotIds`/`all:true`) |
+| Find a described reusable asset (name/category/mood/use case) | `search_assets` across `mine` / `cloud` / `official` (works with the tab closed; use returned locators, never invent a URL) |
 | What media has the user uploaded? | `list_assets` (works with the tab closed; use its urls for block images / `insert_clip`) |
+| Find a spoken topic or visual moment inside this project's video sources | `search_media` (stable source-clock segments; this is not the reusable asset library or web search) |
 | Cut video at a point / trim an end | `split_shot`, `trim_shot` |
 | Remove a whole shot | `delete_shot` |
 | Remove an edited-timeline range (or inside a `[clip X]`) | `cut_range` |
