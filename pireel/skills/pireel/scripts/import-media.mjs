@@ -239,7 +239,7 @@ async function transcribe(path, meta, bins) {
       body: audio,
     });
     if (!putA.ok) return [];
-    const asr = await media({ action: 'asr', audio_key: preA.json.key });
+    const asr = await media({ action: 'asr', audio_key: preA.json.key, duration_sec: meta?.durationSec });
     const off = meta?.audioOffset ?? 0;
     const segs = (asr.json.segments ?? [])
       .filter((s) => s.text?.trim())
