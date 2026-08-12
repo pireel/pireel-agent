@@ -7,8 +7,8 @@
  * the video never touches the cloud. A studio tab MUST be open — if it isn't, this exits
  * asking the agent to open it (create_browser_handoff) and re-run. Only the small extracted
  * audio goes to R2 (transcription needs a public URL DashScope can fetch).
- * B-roll (--broll): still uploaded to the cloud (insert_clip fetches it later, maybe in
- * another session). Images (png/jpg/webp/gif): streamed into the open tab and kept in its
+ * B-roll (--broll): streamed into the open tab over the same loopback path and kept in
+ * device-local OPFS; insert_clip resolves its sig locally. Images (png/jpg/webp/gif): streamed into the open tab and kept in its
  * OPFS library; composed blocks persist only a pireel-local-image: identity. Audio (mp3/m4a/wav/flac/
  * ogg): uploaded into the cloud asset library and returns a url for set_bgm.
  * Metadata probing (ffprobe) + audio transcription (ffmpeg) are optional.
@@ -17,9 +17,9 @@
  *   node import-media.mjs --token imp1.… [--base https://pireel.com] \
  *        [--ffmpeg <path>] [--ffprobe <path>] [--no-transcribe] /path/to/video.mp4 /path/to/logo.png …
  *
- * B-roll mode (--broll): videos upload bytes only (no transcription, no project
- * registration) and print a `sig` — insert into the timeline with the insert_clip
- * MCP tool afterwards.
+ * B-roll mode (--broll): videos stream into the open tab's OPFS library (no
+ * transcription, no project registration, no cloud upload) and print a `sig` — insert
+ * into the timeline with the insert_clip MCP tool afterwards.
  *
  * Auth: --token (short-lived import token from the `import_media` MCP tool).
  * Never pass OAuth tokens here. All server interaction goes through ONE
@@ -54,10 +54,10 @@ const files = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && VALUE_FLAG
 const TRANSFER_MATRIX = [
   'Main video:          local loopback → the OPEN Studio tab, NOT uploaded to the cloud',
   'Transcription audio: a small AAC is uploaded to the cloud (transcription needs a fetchable URL)',
-  'B-roll (--broll):    uploaded to the cloud (insert_clip fetches it later)',
+  'B-roll (--broll):    local loopback → the OPEN Studio tab / OPFS, NOT uploaded to the cloud',
   'Images:              local loopback → the OPEN Studio tab / OPFS, NOT uploaded to the cloud',
   'Audio:               uploaded to the cloud asset library (set_bgm places it on the music lane)',
-  'Requires a Studio tab OPEN for main video and images. No cloud fallback for local bytes.',
+  'Requires a Studio tab OPEN for main video, B-roll and images. No cloud fallback for local bytes.',
 ];
 if (has('explain')) {
   console.log(TRANSFER_MATRIX.join('\n'));
@@ -314,24 +314,34 @@ async function importOne(path, bins) {
   const meta = bins.ffprobe ? probe(bins.ffprobe, path) : null;
   if (!meta) console.error('[pireel-import] ffprobe unavailable — duration/dims unknown (browser will complete them on open)');
 
-  // --broll: bytes only, still via the cloud (insert_clip fetches them from R2 later, possibly
-  // in a different session). No transcription, no project registration.
+  // --broll: bytes only, streamed over loopback into the open tab's OPFS library. No
+  // transcription, no project registration and no cloud upload.
   if (has('broll')) {
-    const pre = await media({ action: 'put', sig, size: st.size, content_type: contentType });
-    if (!pre.ok) fail(`presign failed (HTTP ${pre.status}): ${JSON.stringify(pre.json)}`);
-    if (pre.json.already) console.error('[pireel-import] bytes already in cloud (dedup hit), skipping upload');
-    else {
-      console.error('[pireel-import] uploading b-roll…');
-      const put = await fetch(pre.json.url, {
-        method: 'PUT',
-        headers: { 'Content-Type': pre.json.content_type ?? contentType, 'Cache-Control': 'public, max-age=2592000, immutable' },
-        body: await openAsBlob(path, { type: contentType }),
-        duplex: 'half',
+    const server = await startLocalServer(path, contentType);
+    try {
+      console.error('[pireel-import] handing b-roll to the open studio tab…');
+      const reg = await media({
+        action: 'register-local-assets',
+        entries: [{
+          sig,
+          local_url: server.url,
+          filename: basename(path),
+          mime: contentType,
+          ...(meta?.width ? { width: meta.width } : {}),
+          ...(meta?.height ? { height: meta.height } : {}),
+        }],
       });
-      if (!put.ok) fail(`upload failed: HTTP ${put.status}`);
+      if (!reg.ok || !reg.json.ok) {
+        if (reg.json.error === 'studio_not_open') {
+          fail('the studio tab is not open. Local B-roll stays on this device, so open the target Studio project and retry.');
+        }
+        fail(`local b-roll register failed: ${reg.json.error ?? `HTTP ${reg.status}`}`);
+      }
+    } finally {
+      await server.close();
     }
-    console.error('[pireel-import] b-roll upload done — insert with the insert_clip MCP tool');
-    return { file: basename(path), kind: 'broll', sig, ...(meta?.durationSec ? { duration_sec: meta.durationSec } : {}), next: 'call insert_clip {sig, atSec?} (needs the studio tab open)' };
+    console.error('[pireel-import] b-roll stored in the Studio local library · no cloud upload');
+    return { file: basename(path), kind: 'broll', sig, delivery: 'local', ...(meta?.durationSec ? { duration_sec: meta.durationSec } : {}), next: 'call insert_clip {sig, atSec?} (needs this device\'s studio tab open)' };
   }
 
   // Main video: LOCAL fast path — no cloud upload. Serve the file from a throwaway localhost

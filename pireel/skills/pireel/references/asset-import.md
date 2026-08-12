@@ -1,6 +1,6 @@
 ---
 name: asset-import
-description: Use when the user points at a LOCAL video, image or audio file (a path like /Users/..., C:\..., or a chat attachment materialized as a file) that should be used in Pireel Studio. Covers streaming local source video straight into the OPEN Studio tab over the user's machine (no cloud upload), registering it on a project, optional metadata probing and transcription via ffmpeg/ffprobe, and when the studio tab must be open.
+description: Use when the user points at a LOCAL video, B-roll, image or audio file (a path like /Users/..., C:\..., or a chat attachment materialized as a file) that should be used in Pireel Studio. Covers streaming local visual media straight into the OPEN Studio tab over the user's machine (no cloud upload), registering it in device-local OPFS, optional metadata probing and transcription via ffmpeg/ffprobe, and when the studio tab must be open.
 ---
 
 # Asset Import — local video into Pireel
@@ -15,23 +15,26 @@ This is the authoritative statement — tool descriptions and other references m
 |---|---|
 | **Main video** | **localhost → the OPEN Studio tab, over the user's machine — NOT uploaded to the cloud** (fast even for big files) |
 | Transcription audio | a small AAC is uploaded to the cloud (Pireel's transcription needs a URL it can fetch) |
-| B-roll (`--broll`) | uploaded to the cloud (`insert_clip` fetches it later, possibly in another session) |
+| **B-roll (`--broll`)** | **localhost → the OPEN Studio tab → device-local OPFS; `insert_clip` resolves its sig locally — NOT uploaded to R2** |
 | **Images** | **localhost → the OPEN Studio tab → device-local OPFS; project stores only a local locator — NOT uploaded to R2** |
 | Audio (music/SFX) | uploaded to the cloud asset library (`set_bgm` places it on the music lane) |
 
-**Because main video and image bytes stream straight into the browser, a Studio tab MUST be open before you import either.** If none is, the helper exits with `studio_not_open` — open one (call `create_browser_handoff` and open the URL in your own in-app browser, or ask the user to open the project) and re-run the helper. There is no cloud fallback for user-local visual media.
+**Because main video, B-roll and image bytes stream straight into the browser, a Studio tab MUST be open before you import them.** If none is, the helper exits with `studio_not_open` — open one (call `create_browser_handoff` and open the URL in your own in-app browser, or ask the user to open the project) and re-run the helper. There is no cloud fallback for user-local visual media.
 
 ## Two ways in (both keep the video local)
 
 **A. The helper — PRIMARY.** Runs a throwaway localhost server and hands the bytes to the open tab via `register-local`; the tab fetches them over loopback (verified working, including in restricted in-app browsers — every response carries a Content-Type). Works with ANY browser hosting the tab (the user's own Chrome or an agent-driven one) and needs no browser-driving ability from you: one command imports, probes metadata, transcribes, and registers the project. Details below.
 
-**B. Direct injection (fallback — when the helper can't run, and you drive the browser yourself).** No import token, no helper. With the studio tab open, set the file on the studio's always-present hidden input — Playwright is exposed as `tab.playwright`:
+**B. Direct injection (fallback — when the helper can't run, and you drive the browser yourself).** No import token, no helper. With an empty studio output open, use the browser's file-chooser bridge from the stable canvas trigger:
 
 ```js
-await tab.playwright.setInputFiles('[data-pireel-video-input]', '/absolute/path/to/video.mp4');
+const chooserPromise = tab.playwright.waitForEvent('filechooser', { timeoutMs: 10000 });
+await tab.playwright.locator('[data-pireel-video-trigger]').click();
+const chooser = await chooserPromise;
+await chooser.setFiles('/absolute/path/to/video.mp4');
 ```
 
-The studio reads the file locally into its OPFS library and makes it the main video — nothing is uploaded. Then transcribe with the `extract_asr` MCP tool (it runs in the tab; note this route skips the helper's ffprobe/transcript step). If `setInputFiles` isn't available, catch the file chooser instead: `tab.playwright.waitForEvent('filechooser')` then `chooser.setFiles(path)` around a click on the input.
+The studio reads the file locally into its OPFS library and makes it the main video — nothing is uploaded. Then transcribe with the `extract_asr` MCP tool (it runs in the tab; note this route skips the helper's ffprobe/transcript step). Do not call `locator.setInputFiles`: the supported browser API exposes file selection through the chooser object.
 
 Both routes converge after the bytes enter the tab: the same local import session classifies the
 media, persists it to OPFS, and writes the same metadata-only `localAssets` project index used by
@@ -110,13 +113,13 @@ Nothing is transcribed or probed for a timeline here — an audio asset is somet
 
 ## B-roll (insert a clip into the timeline)
 
-To add a local video as a SEGMENT of the current project (not as its main footage), upload with `--broll`:
+To add a local video as a SEGMENT of the current project (not as its main footage), stream it into the open tab with `--broll`:
 
 ```
 node import-media.mjs --token … --broll /path/to/broll.mp4
 ```
 
-This uploads bytes only (no transcription, no project registration) and prints a `sig`. Then call the `insert_clip` MCP tool with `{sig, atSec?}` — it needs the studio tab open (video bytes live in the browser). The clip snaps to the nearest shot boundary, later overlays shift right, and it is a full peer afterwards: framing, captions, matting, its own audio, and on-demand transcription all apply. A video already in the user's library (e.g. a generated one) can be inserted directly via `insert_clip {url}` — external URLs are rejected, upload those first.
+This serves the bytes once over localhost, stores them in the open tab's device-local OPFS library, and prints a `sig`; it does not upload the video to R2. Then call `insert_clip {sig, atSec?}` — the tool resolves that sig from local OPFS first. The clip snaps to the nearest shot boundary, later overlays shift right, and it is a full peer afterwards: framing, captions, matting, its own audio, and on-demand transcription all apply. A video already in the user's cloud library (for example a generated one) can still be inserted via `insert_clip {url}`. This local sig is device-scoped: on another device the user must restore the same source file instead of silently uploading it.
 
 ## Project targeting
 
