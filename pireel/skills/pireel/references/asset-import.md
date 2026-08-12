@@ -16,10 +16,10 @@ This is the authoritative statement — tool descriptions and other references m
 | **Main video** | **localhost → the OPEN Studio tab, over the user's machine — NOT uploaded to the cloud** (fast even for big files) |
 | Transcription audio | a small AAC is uploaded to the cloud (Pireel's transcription needs a URL it can fetch) |
 | B-roll (`--broll`) | uploaded to the cloud (`insert_clip` fetches it later, possibly in another session) |
-| Images | uploaded to the cloud asset library, or inlined as a data URI |
+| **Images** | **localhost → the OPEN Studio tab → device-local OPFS; project stores only a local locator — NOT uploaded to R2** |
 | Audio (music/SFX) | uploaded to the cloud asset library (`set_bgm` places it on the music lane) |
 
-**Because the main video streams straight into the browser, a Studio tab MUST be open before you import it.** If none is, the helper exits with `studio_not_open` — open one (call `create_browser_handoff` and open the URL in your own in-app browser, or ask the user to open the project) and re-run the helper. There is no cloud fallback for the main video.
+**Because main video and image bytes stream straight into the browser, a Studio tab MUST be open before you import either.** If none is, the helper exits with `studio_not_open` — open one (call `create_browser_handoff` and open the URL in your own in-app browser, or ask the user to open the project) and re-run the helper. There is no cloud fallback for user-local visual media.
 
 ## Two ways in (both keep the video local)
 
@@ -48,6 +48,15 @@ the same deletion sync and cross-browser “restore access” guidance; only the
 4. If `ffmpeg` is available and the file has audio: extracts a small AAC track, uploads ONLY that audio to the cloud, and runs Pireel's transcription — the transcript lands on the project immediately.
 5. Registers everything on a project (server-side, conservative targeting) and prints a JSON summary.
 
+The JSON keeps video import and transcription outcomes separate. `transcription.status` is:
+
+- `completed` — timed transcript rows were registered.
+- `empty` — transcription ran successfully but found no speech/timed sentences.
+- `skipped` — disabled, no audio track, or ffmpeg was unavailable.
+- `failed` — billing, authentication, upload, storage, or provider failure. The video is still imported, and `error`, optional `http_status`, and a short `detail` explain what needs recovery.
+
+Never interpret `transcript: 0` alone as “the video has no speech.” Check `transcription.status`: for `failed`, surface the error and recover it (for example, let the user add credits for `insufficient_tokens`, then run `extract_asr` in the open Studio tab). Do not repeatedly re-import the local video just to retry transcription.
+
 Full flow: open a tab if none is → `import_media` (no args, MCP) → token → run helper with `--token` → read the JSON → `get_state`.
 
 ```bash
@@ -55,7 +64,7 @@ node <pireel-skill-dir>/scripts/import-media.mjs --token <import-token> /path/to
 # options: --base https://pireel.com · --ffmpeg/--ffprobe <path> · --no-transcribe
 ```
 
-**Run the helper OUT of sandbox by default** — it needs the user's local file paths and network access to the Pireel endpoint; request approval instead of attempting a sandboxed run first. A sandboxed `connection refused` does not mean the server is down.
+**Run the helper OUT of sandbox by default** — it needs the user's local file paths and network access to the Pireel endpoint; request approval instead of attempting a sandboxed run first. When transcription is enabled, the approval description must say that the main video remains local while its extracted AAC is uploaded for cloud ASR. A sandboxed `connection refused` does not mean the server is down.
 
 Auth — no user action needed: call the `import_media` MCP tool **with no arguments** first; it returns a short-lived (30 min) import `token`. Pass that to the helper via `--token`. Never pass OAuth tokens to shell commands.
 
@@ -77,14 +86,15 @@ If the package manager itself is unavailable or the install command is denied, T
 
 ## Images
 
-Two routes, picked by what the deployment has — the goal is the user's local image (logo, product shot, screenshot) ending up inside a composed block (`<img src="...">` in the compose_block_brief → apply_block flow).
+Pass image paths (`.png`/`.jpg`/`.webp`/`.gif`, ≤ 30MB) to the same helper. It serves each file on a throwaway loopback URL; the open Studio tab copies it into device-local OPFS and registers only its signature, dimensions and local locator. Mixed invocations work:
 
-**Small images (≲ 500KB): inline as a data URI — fully local, zero storage.** You write the block HTML yourself in the BYO flow, so read the file, base64 it, and embed `<img src="data:image/png;base64,...">` directly. No upload, works on every deployment including self-hosted with no storage. Constraint: the whole apply_block payload must stay under ~1MB (bridge message cap), and inlined images bloat the saved project — keep them small (compress/resize first if ffmpeg is around).
+```bash
+node import-media.mjs --token … video.mp4 logo.png
+```
 
-**Larger images: upload to the asset library via the same helper.** Image paths (`.png`/`.jpg`/`.webp`/`.gif`, ≤ 30MB) passed alongside videos are uploaded and registered; mixed invocations work: `node import-media.mjs --token … video.mp4 logo.png`.
+The returned `url_kind` is `local` and the locator starts with `pireel-local-image:`. Use that exact locator in generated block markup. The preview resolves it to an iframe-local object URL; capture and export read the original OPFS file and inline it only in the transient render document. The saved project never contains the bytes, a data URI or an R2 key.
 
-- `url_kind: "public"` — a stable public/CDN link came back: safe to bake into blocks. (Hosted pireel.com always does this.)
-- `url_kind: "none"` — the deployment has storage but no public media base: the bytes are stored and visible in the asset library, but there is no stable URL to bake into blocks. Fall back to the data-URI route for the block itself, or tell the user to configure a public media base.
+This is deliberately device-local. On a different browser/device the project keeps its locator but cannot render the image until the user imports the same file there. Never work around that by uploading the file or substituting another image.
 
 ## Audio (music / sound effects)
 

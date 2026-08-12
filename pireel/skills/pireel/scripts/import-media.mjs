@@ -8,9 +8,9 @@
  * asking the agent to open it (create_browser_handoff) and re-run. Only the small extracted
  * audio goes to R2 (transcription needs a public URL DashScope can fetch).
  * B-roll (--broll): still uploaded to the cloud (insert_clip fetches it later, maybe in
- * another session). Images (png/jpg/webp/gif): uploaded to the user's asset library and
- * return a reference URL usable in composed blocks (<img src>). Audio (mp3/m4a/wav/flac/
- * ogg): same route as images — into the asset library, returns a url for set_bgm.
+ * another session). Images (png/jpg/webp/gif): streamed into the open tab and kept in its
+ * OPFS library; composed blocks persist only a pireel-local-image: identity. Audio (mp3/m4a/wav/flac/
+ * ogg): uploaded into the cloud asset library and returns a url for set_bgm.
  * Metadata probing (ffprobe) + audio transcription (ffmpeg) are optional.
  *
  * Usage (normal flow — the agent gets `token` from the `import_media` MCP tool):
@@ -55,9 +55,9 @@ const TRANSFER_MATRIX = [
   'Main video:          local loopback → the OPEN Studio tab, NOT uploaded to the cloud',
   'Transcription audio: a small AAC is uploaded to the cloud (transcription needs a fetchable URL)',
   'B-roll (--broll):    uploaded to the cloud (insert_clip fetches it later)',
-  'Images:              uploaded to the cloud asset library (or inlined as a data URI)',
+  'Images:              local loopback → the OPEN Studio tab / OPFS, NOT uploaded to the cloud',
   'Audio:               uploaded to the cloud asset library (set_bgm places it on the music lane)',
-  'Requires a Studio tab OPEN for the main video (bytes stream into it). No cloud fallback for it.',
+  'Requires a Studio tab OPEN for main video and images. No cloud fallback for local bytes.',
 ];
 if (has('explain')) {
   console.log(TRANSFER_MATRIX.join('\n'));
@@ -154,37 +154,50 @@ async function startLocalServer(path, contentType) {
 const IMAGE_MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' };
 const AUDIO_MIME = { mp3: 'audio/mpeg', m4a: 'audio/mp4', aac: 'audio/aac', wav: 'audio/wav', flac: 'audio/flac', ogg: 'audio/ogg', opus: 'audio/ogg', weba: 'audio/webm' };
 
-/** Image → user asset library. Returns a reference URL for composed blocks (<img src>)
- *  when the deployment has a public media base; otherwise url is null (inline small
- *  images as data URIs in block HTML instead — see the skill). */
+/** Image → the open Studio tab's OPFS library. The returned locator persists only the file
+ * identity; preview/export resolve the bytes from this device and never upload them to R2. */
 async function importImage(path, bins) {
   const st = await stat(path);
   const mime = IMAGE_MIME[path.toLowerCase().match(/\.(png|jpe?g|webp|gif)$/)?.[1] ?? ''];
+  const sig = `${basename(path)}:${st.size}:${Math.round(st.mtimeMs)}`;
   console.error(`[pireel-import] ${basename(path)} · image · ${(st.size / 1048576).toFixed(1)}MB`);
-  const pre = await media({ action: 'put-image', size: st.size, content_type: mime });
-  if (!pre.ok) fail(`image presign failed (HTTP ${pre.status}): ${JSON.stringify(pre.json)}`);
-  const put = await fetch(pre.json.url, {
-    method: 'PUT',
-    headers: { 'Content-Type': mime, 'Cache-Control': pre.json.cache_control ?? 'public, max-age=2592000, immutable' },
-    body: await openAsBlob(path, { type: mime }),
-    duplex: 'half',
-  });
-  if (!put.ok) fail(`image upload failed: HTTP ${put.status}`);
   const meta = bins.ffprobe ? probe(bins.ffprobe, path) : null; // ffprobe reads image dims too
-  const reg = await media({
-    action: 'register-image',
-    key: pre.json.key,
-    label: basename(path),
-    ...(meta?.width ? { width: meta.width } : {}),
-    ...(meta?.height ? { height: meta.height } : {}),
-  });
-  if (!reg.ok || !reg.json.ok) fail(`image register failed: ${reg.json.error ?? `HTTP ${reg.status}`}`);
-  if (reg.json.url) console.error('[pireel-import] image in asset library · stable public url');
-  else console.error('[pireel-import] image stored, but no public media base — inline it as a data URI in block HTML instead');
-  return { file: basename(path), kind: 'image', key: reg.json.key, url: reg.json.url, url_kind: reg.json.url_kind };
+  const server = await startLocalServer(path, mime);
+  try {
+    const reg = await media({
+      action: 'register-local-assets',
+      entries: [{
+        sig,
+        local_url: server.url,
+        filename: basename(path),
+        mime,
+        ...(meta?.width ? { width: meta.width } : {}),
+        ...(meta?.height ? { height: meta.height } : {}),
+      }],
+    });
+    if (!reg.ok || !reg.json.ok) {
+      if (reg.json.error === 'studio_not_open') {
+        fail('the studio tab is not open. Local images stay on this device, so open the target Studio project and retry.');
+      }
+      fail(`local image register failed: ${reg.json.error ?? `HTTP ${reg.status}`}`);
+    }
+    console.error('[pireel-import] image stored in the Studio local library · no cloud upload');
+    return {
+      file: basename(path),
+      kind: 'image',
+      sig,
+      url: `pireel-local-image:${encodeURIComponent(sig).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`)}`,
+      url_kind: 'local',
+      delivery: 'local',
+      ...(meta?.width ? { width: meta.width } : {}),
+      ...(meta?.height ? { height: meta.height } : {}),
+    };
+  } finally {
+    await server.close();
+  }
 }
 
-/** Music / SFX → user asset library. Same two-step as images (presign → PUT → register); the
+/** Music / SFX → cloud asset library (presign → PUT → register); the
  *  returned url is what set_bgm takes. Nothing here is transcribed or probed for a timeline:
  *  an audio asset is a thing you place, not footage you cut. */
 async function importAudio(path, bins) {
@@ -217,35 +230,76 @@ async function importAudio(path, bins) {
   };
 }
 
+function transcriptionFailure(error, detail, httpStatus) {
+  const safeError = String(error || 'transcription_failed').slice(0, 120);
+  const safeDetail = typeof detail === 'string' && detail.trim() ? detail.trim().slice(0, 240) : undefined;
+  const suffix = httpStatus ? `, HTTP ${httpStatus}` : '';
+  console.error(`[pireel-import] transcription failed (${safeError}${suffix}) — importing video without transcript`);
+  return {
+    status: 'failed',
+    error: safeError,
+    ...(httpStatus ? { http_status: httpStatus } : {}),
+    ...(safeDetail ? { detail: safeDetail } : {}),
+    segments: [],
+  };
+}
+
 /** Extract audio → upload the small audio to R2 → server-side transcription (ASR needs a
  *  public URL DashScope can fetch; only the tiny audio goes to the cloud, never the video).
- *  Returns offset-corrected sentence segments (empty on any failure — transcript is optional). */
+ *  The video import remains usable when transcription fails, but the result preserves the
+ *  failure instead of making billing/auth/provider errors look like a valid empty transcript. */
 async function transcribe(path, meta, bins) {
-  if (!bins.ffmpeg || !(meta?.hasAudio ?? true) || has('no-transcribe')) return [];
+  if (!bins.ffmpeg) return { status: 'skipped', reason: 'ffmpeg_unavailable', segments: [] };
+  if (!(meta?.hasAudio ?? true)) return { status: 'skipped', reason: 'no_audio_track', segments: [] };
+  if (has('no-transcribe')) return { status: 'skipped', reason: 'disabled', segments: [] };
   const tmp = join(tmpdir(), `pireel-audio-${Date.now()}.m4a`);
   const r = spawnSync(bins.ffmpeg, ['-y', '-v', 'quiet', '-i', path, '-vn', '-acodec', 'aac', '-b:a', '64k', tmp], { stdio: 'ignore' });
   if (r.status !== 0) {
-    console.error('[pireel-import] audio extraction failed — importing without transcript');
-    return [];
+    return transcriptionFailure('audio_extraction_failed');
   }
   try {
     console.error('[pireel-import] transcribing…');
     const audio = await readFile(tmp);
     const preA = await media({ action: 'put-audio', size: audio.byteLength });
-    if (!preA.ok || !preA.json.url) return [];
+    if (!preA.ok || !preA.json.url) {
+      return transcriptionFailure(
+        preA.json.error ?? 'audio_upload_prepare_failed',
+        preA.json.detail ?? preA.json.hint,
+        preA.status,
+      );
+    }
     const putA = await fetch(preA.json.url, {
       method: 'PUT',
       headers: { 'Content-Type': 'audio/mp4', 'Cache-Control': 'public, max-age=2592000, immutable' },
       body: audio,
     });
-    if (!putA.ok) return [];
+    if (!putA.ok) return transcriptionFailure('audio_upload_failed', undefined, putA.status);
     const asr = await media({ action: 'asr', audio_key: preA.json.key, duration_sec: meta?.durationSec });
+    if (!asr.ok) {
+      return transcriptionFailure(
+        asr.json.error ?? 'asr_request_failed',
+        asr.json.detail ?? asr.json.hint,
+        asr.status,
+      );
+    }
+    if (asr.json.asr_ok === false) {
+      const detail = typeof asr.json.detail === 'string' ? asr.json.detail : '';
+      if (/returned no (?:text|transcript)|no speech/i.test(detail)) {
+        console.error('[pireel-import] transcript: no speech detected');
+        return { status: 'empty', reason: 'no_speech', segments: [] };
+      }
+      return transcriptionFailure(asr.json.error ?? 'asr_provider_failed', detail);
+    }
     const off = meta?.audioOffset ?? 0;
     const segs = (asr.json.segments ?? [])
       .filter((s) => s.text?.trim())
       .map((s) => ({ start: Math.max(0, s.start + off), end: Math.max(s.start + off + 0.1, s.end + off), text: s.text.trim() }));
+    if (!segs.length) {
+      console.error('[pireel-import] transcript: no timed sentences returned');
+      return { status: 'empty', reason: 'no_timed_sentences', segments: [] };
+    }
     console.error(`[pireel-import] transcript: ${segs.length} sentences`);
-    return segs;
+    return { status: 'completed', segments: segs };
   } finally {
     await unlink(tmp).catch(() => {});
   }
@@ -285,7 +339,8 @@ async function importOne(path, bins) {
   // The small audio still goes to R2 for transcription (DashScope needs a public URL).
   const server = await startLocalServer(path, contentType);
   try {
-    const transcript = await transcribe(path, meta, bins);
+    const transcription = await transcribe(path, meta, bins);
+    const transcript = transcription.segments;
     console.error('[pireel-import] handing the video to the open studio tab…');
     const reg = await media({
       action: 'register-local',
@@ -306,7 +361,16 @@ async function importOne(path, bins) {
       }
       fail(`register failed: ${reg.json.error ?? `HTTP ${reg.status}`}`);
     }
-    return { file: basename(path), sig, ...reg.json.data, transcript: transcript.length, probed: !!meta, delivery: 'local' };
+    const { segments: _segments, ...transcriptionResult } = transcription;
+    return {
+      file: basename(path),
+      sig,
+      ...reg.json.data,
+      transcript: transcript.length,
+      transcription: transcriptionResult,
+      probed: !!meta,
+      delivery: 'local',
+    };
   } finally {
     await server.close();
   }
