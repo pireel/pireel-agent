@@ -21,6 +21,16 @@ If the user says only “一组”, “多条”, “several”, “a batch”, 
 
 Ask only one blocking decision at a time. Do not pair a bounded choice with a second open-ended question in the same response. Never invent product results, price, discount, scarcity, endorsement, CTA destination, music rights, or legal wording.
 
+## Choose how the edit communicates
+
+Voiceover is optional, but a content or visual narrative spine is required. After the deliverable shape and product facts are clear, choose one primary mode before the Frame and pilot:
+
+- **voice-led:** existing speech, a user recording, or an approved generated voiceover carries the argument;
+- **screen-copy-led:** concise hook, value, proof, and CTA copy carry the message with music and/or useful source sound;
+- **visual-led:** selected actions, composition, source sound, and brand feeling carry the edit with minimal copy; use it for product-world or brand work, not as a guaranteed conversion format.
+
+Use an explicit mode from the request when available. Otherwise offer these choices and wait. Do not require a voiceover just because the clips are silent, and do not silently generate speech or music from a general request for a finished montage. For voice-led work, receive or draft the script and confirm claims, pronunciation, and CTA before any charge-bearing speech generation. For multiple outputs, define which script, copy, caption, source-sound, and music layers are shared versus intentionally varied.
+
 ## Offer a visual system before the pilot
 
 Skill and Frame remain independent: content category never determines a Frame. For a complete creative build with no attached Frame, once you understand the footage and requested visual feeling, call `list_frames` and recommend one or two evidence-based candidates plus a themeless option. Wait for the choice. After authorization, call `attach_frame`, then `read_frame`, and carry that audiovisual language through typography, crops, pacing, motion, captions, graphics, sound-image relationships, and ratio adaptations. Do not merely recolor generic cards.
