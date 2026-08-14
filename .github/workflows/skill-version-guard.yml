@@ -1,11 +1,9 @@
 name: skill version guard
 
-# The pireel skill self-updates through a version handshake: the MCP server
-# announces a baseline and clients compare it against the VERSION file that
-# ships next to SKILL.md. If skill content changes without a version bump,
-# installed clients silently keep the stale copy. This guard fails any push
-# or PR that edits the skill tree without touching VERSION (or leaves it in
-# a shape clients can't compare).
+# The MCP server announces a workflow baseline and both distribution channels
+# bundle the same VERSION next to SKILL.md. Plugin SemVer remains independent;
+# each channel uses its own updater. This guard makes workflow-content releases
+# observable without coupling them to the Plugin package version.
 
 on:
   push:
@@ -31,14 +29,15 @@ jobs:
             echo "No comparable base commit; skipping."
             exit 0
           fi
-          VERSION_FILE="pireel/skills/pireel/VERSION"
+          SKILL_DIR="plugins/pireel/skills"
+          VERSION_FILE="$SKILL_DIR/pireel/VERSION"
           # The tag is opaque (clients update on mismatch, not ordering) — the only shape
           # requirement is one clean token; the real invariant is that it CHANGES per release.
           if [ "$(wc -l < "$VERSION_FILE")" -gt 1 ] || ! grep -qE '^[^[:space:]]{1,64}$' "$VERSION_FILE"; then
             echo "::error::$VERSION_FILE must be a single non-empty token line."
             exit 1
           fi
-          if git diff --quiet "$BASE" HEAD -- pireel/skills/; then
+          if git diff --quiet "$BASE" HEAD -- "$SKILL_DIR/"; then
             echo "Skill tree unchanged; ok."
             exit 0
           fi
@@ -46,6 +45,6 @@ jobs:
             echo "Skill tree changed and VERSION changed; ok."
             exit 0
           fi
-          echo "::error::pireel/skills/ changed but $VERSION_FILE did not."
+          echo "::error::$SKILL_DIR/ changed but $VERSION_FILE did not."
           echo "Give it a new distinct value — the server baseline derives from the same file."
           exit 1

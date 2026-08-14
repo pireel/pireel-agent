@@ -9,19 +9,35 @@ different versions for different platforms.
 
 [Read the setup guide](https://pireel.com/connect-agent.md)
 
-## Install
+## Install as a Plugin
 
-For supported agents:
+In the Codex desktop app, open **Plugins**, install **Pireel Studio** when it is
+available in your plugin directory, then start a new chat. The Plugin bundles the
+Pireel workflow and authenticated MCP connection.
+
+For repository-marketplace testing in Codex CLI:
 
 ```bash
-npx skills add pireel/pireel-agent
+codex plugin marketplace add https://github.com/pireel/pireel-agent
+codex plugin add pireel@pireel-marketplace
 ```
 
 Then tell your agent:
 
 > Set up Pireel and help me edit my first video.
 
-The agent will guide you through sign-in and importing media.
+The Plugin guides you through sign-in and importing media.
+
+## Install as a standalone Skill
+
+Use this route for Codex IDE and other Agent Skills-compatible hosts:
+
+```bash
+npx skills add pireel/pireel-agent
+```
+
+The standalone Skill uses the same workflow but registers the Pireel MCP server
+through the host's own MCP configuration.
 
 ### Claude Code
 
@@ -31,7 +47,7 @@ You can also connect Claude Code directly:
 claude mcp add --transport http pireel https://pireel.com/api/studio/mcp
 ```
 
-For the full guided editing workflow, install the Pireel Skill with
+For the full guided editing workflow, install the standalone Pireel Skill with
 `npx skills add`.
 
 ## What you can ask
@@ -49,11 +65,15 @@ Some preparation tasks can also continue without keeping the Studio tab open.
 
 ## Update
 
+- **Plugin installation:** update or reinstall Pireel through the host's Plugins
+  manager. The Plugin version is managed independently from the workflow baseline.
+- **Standalone Skill:** run:
+
 ```bash
 npx skills update pireel
 ```
 
-Re-running `npx skills add pireel/pireel-agent` also updates the installation.
+Re-running `npx skills add pireel/pireel-agent` also updates a standalone installation.
 
 ## Usage and credits
 

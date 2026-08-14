@@ -5,23 +5,25 @@ description: FIRST-RUN setup for Pireel Studio. Run this whenever the user asks 
 
 # Getting started with Pireel Studio
 
-Pireel Studio (https://pireel.com) is an AI video editor for **talking-head videos** (any aspect — the canvas follows the source footage). Through the `pireel` MCP server your tools edit the composition **live in a studio browser tab**: transcript-based cutting, storyboarding, designed graphics, subtitles, themes, local media import.
+Pireel Studio (https://pireel.com) is a multi-source AI video editor for producing one or more independently editable cuts. Through the `pireel` MCP server your tools edit the composition **live in a studio browser tab**: transcript-based cutting, montage, storyboarding, designed graphics, subtitles, themes and local media import.
 
-If you are reading this, the Pireel skill is already installed on this machine. This connects the MCP server and gets the user to their first edit. Complete **ALL steps in order** — setup is incomplete until you print the self-report in the final step.
+If you are reading this, the Pireel workflow is already available either from the Pireel Plugin or as a standalone Skill. This connects the MCP server when needed and gets the user to their first edit. Complete **ALL steps in order** — setup is incomplete until you print the self-report in the final step.
 
 **If you JUST installed the skill this turn: do NOT stop.** A freshly-installed skill only auto-activates in a *new* session, but this file is already on disk — read it and run the steps below **now, in the same turn**. Never end your turn at "the skill will be available next time" or tell the user to start a new conversation; keep going straight into Step 1.
 
 **Base URL** (`<BASE>` below): `https://pireel.com`, unless the user runs Pireel locally, in which case use their localhost origin (e.g. `http://localhost:3005`).
 
-**Host gate**: you must be on the user's LOCAL machine (desktop app or a local CLI with shell access to their agent config). In a web / remote sandbox you cannot edit the MCP client config — tell the user to run their agent locally and re-invoke this skill there.
+**Host gate**: if Pireel MCP tools are already available through the installed Plugin, continue on any supported host. Web/mobile/remote hosts can work with cloud projects, stock media and server-side tools, but cannot read a path on the user's computer or edit its local agent config. A LOCAL desktop/CLI host is required only when registering MCP for a standalone Skill or importing local-file bytes through the helper.
 
-**Sandbox rule**: your shell sandbox may block ALL network (even localhost). Run network commands out of sandbox (request approval instead of attempting a sandboxed run first). NEVER conclude the Pireel server is down from a sandboxed `curl` — your MCP connection and `mcp login` do not go through the shell sandbox and work regardless.
+**Sandbox rule**: on a host with shell access, the shell sandbox may block ALL network (even localhost). Run required network commands out of sandbox (request approval instead of attempting a sandboxed run first). NEVER conclude the Pireel server is down from a sandboxed `curl` — Plugin/MCP connections do not go through that shell sandbox.
 
-## Step 1 — Register the Pireel MCP server
+## Step 1 — Use or register the Pireel MCP server
 
 MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
 
-- **Codex** (plugin already installed via `npx skills add`): `codex mcp login pireel`. If the server is not registered yet, add it to `~/.codex/config.toml` first — the `oauth_resource` line is REQUIRED (without it Codex expects a static bearer token instead of OAuth):
+- **Pireel Plugin:** the bundled `.mcp.json` registers the server. If Pireel tools are already available, do not edit agent config and continue to Step 2. If the Plugin is installed but its tools are absent, start a new chat/session once so the host can load the bundle; do not install a second standalone copy to compensate.
+
+- **Standalone Skill on Codex:** run `codex mcp login pireel`. If the server is not registered yet, add it to `~/.codex/config.toml` first — the `oauth_resource` line is REQUIRED (without it Codex expects a static bearer token instead of OAuth):
 
   ```toml
   [mcp_servers.pireel]

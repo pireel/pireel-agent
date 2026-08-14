@@ -1,11 +1,11 @@
 ---
 name: pireel
-description: Edit talking-head videos in Pireel Studio through the `pireel` MCP server — first-run connect/setup, transcript-based cutting, storyboarding, designed graphic blocks, kinetic captions, themes, MP4 export, local media import, and error recovery. Read this whenever the user wants to install/connect/set up Pireel, or to edit/cut/trim/storyboard/illustrate/caption/theme/export a Pireel video, or when any `pireel` MCP tool is about to be called for the first time or fails. Routes to the right bundled reference for each task.
+description: Edit videos in Pireel Studio through the `pireel` MCP server — first-run setup, local and stock media import, transcript editing, multi-source montage, multiple editable outputs, storyboarding, designed graphics, captions, themes and export. Read this whenever the user wants to install/connect Pireel or edit, cut, remix, storyboard, illustrate, caption, theme or export a Pireel video, and before the first Pireel MCP call or after a tool failure. Routes to the matching bundled playbook.
 ---
 
 # Pireel Studio
 
-Pireel Studio (https://pireel.com) is a video editor for **talking-head videos** (any aspect — the canvas follows the source footage). Your tools edit the composition **live in the user's open studio browser tab** via the `pireel` MCP server; when no tab is open, data-level tools fall back to **OFFLINE MODE** against the user's latest cloud project.
+Pireel Studio (https://pireel.com) is a multi-source video editor that can produce multiple independently editable cuts from one project. Your tools edit the composition **live in the user's open studio browser tab** via the `pireel` MCP server; when no tab is open, data-level tools fall back to **OFFLINE MODE** against the user's latest cloud project.
 
 This one skill covers the whole product. Skim the essentials below, then **open the matching file in `references/` for the task at hand** — don't work from memory on the specialized flows.
 
@@ -41,6 +41,24 @@ The local media import helper lives at `scripts/import-media.mjs` (Node ≥ 20, 
 
 Agent orchestration and every BYO flow run on the user's own agent subscription, not Pireel credits. Pireel bills only media generation (images/video) and the audio/vision pipelines (transcription, visual analysis). Details in `references/product-help.md`.
 
-## Skill version
+## Workflow version and update channel
 
-Your installed version is recorded in the **`VERSION` file next to this SKILL.md** (a single line) — read it from the skill directory (see "Locating the references" above). On connect, the Pireel MCP server announces its current skill baseline in its instructions. Versions are opaque release tags — don't try to order them: **if the two strings DIFFER, update the skill YOURSELF** before continuing: run `npx skills update pireel` (fallback: `npx skills add pireel/pireel-agent`) — the host's command-approval flow is the user's consent, don't bounce it to them — then re-read the updated files. If they still differ after one update attempt, or the command is unavailable or denied, or `VERSION` is missing, mention it once and continue. Don't nag when they match.
+The `VERSION` file next to this SKILL.md is the Pireel **workflow baseline**, not the
+Plugin version. The Plugin has its own SemVer in `.codex-plugin/plugin.json`; never compare
+those two values.
+
+On connect, the Pireel MCP server announces its current workflow baseline. Versions are opaque
+release tags — don't order them. If the installed `VERSION` differs, first determine how this
+skill was installed:
+
+- **Plugin bundle:** if the host identifies this as a skill bundled by the Pireel Plugin, or
+  `.codex-plugin/plugin.json` exists two directories above this SKILL.md, do **not** run
+  `npx skills`. Use the host's Plugin update/reinstall flow when it is directly available.
+  Otherwise mention once that the Pireel Plugin needs updating, then continue with the installed
+  workflow.
+- **Standalone Skill:** run `npx skills update pireel` yourself (fallback:
+  `npx skills add pireel/pireel-agent`) through the host's normal command-approval flow, then
+  re-read the updated files.
+
+After one update attempt, if the values still differ, the update mechanism is unavailable or
+denied, or `VERSION` is missing, mention it once and continue. Don't nag when they match.
