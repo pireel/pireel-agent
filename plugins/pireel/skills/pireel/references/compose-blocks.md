@@ -1,11 +1,11 @@
 ---
 name: compose-blocks
-description: The BYO-brain workflow for creating and rewriting overlay graphics in Pireel Studio — compose_block_brief, generating the block yourself, apply_block, lint-fix loops, get_icons, and frame playbooks. Use whenever the user wants a new on-screen graphic (card, chart, callout, title), wants an existing block's content or animation changed, or when placeholders (待配图) need filling.
+description: The BYO-brain workflow for creating and rewriting Components in Pireel Studio — especially the Motion Graphic family — using compose_block_brief, apply_block, lint-fix loops, get_icons, and Frame playbooks. Use whenever the user wants kinetic words, a number reveal, data story, logo sting, overlay, real-source highlight or other designed on-screen motion, wants an existing Component changed, or when placeholders (待配图) need filling.
 ---
 
-# Composing blocks (BYO generation)
+# Composing Components and Motion Graphics (BYO generation)
 
-In Pireel Studio, **you are the model** for block HTML. Blocks are the designed graphic fragments laid over the video (metric cards, charts, diagrams, callouts, titles). The flow is always:
+In Pireel Studio, **you are the model** for Component HTML. **Component** is the broader, extensible visual-element concept. **Motion Graphic** is the primary Component family available today: kinetic words, one number, data, a logo sting, an overlay, a real-source highlight or a bespoke visual relation. The editor stores a Component as a `block`; use “Motion Graphic” for this family, but do not collapse every present or future Component into that subtype. The flow is always:
 
 ```
 compose_block_brief  →  generate the block yourself  →  apply_block
@@ -31,7 +31,7 @@ Adopt the returned `system` and `prompt` verbatim. **The contract's shape follow
   1. **One short note** (a sentence about what you built),
   2. a **```html fence** with the block's markup and scoped styles,
   3. a **```js fence** with the deterministic animation timeline.
-- **Themeless project** (no frame) → a component choice: **one ```json fence** and nothing else, either `{"component": "<id from the brief's catalogue>", "props": {...}}`, or `{"custom": true}` when no listed component carries the content (then call `compose_block_brief` again with `format: "html"` to get the free-form contract and build it by hand), or `null` when the moment genuinely deserves no graphic (a batch fill drops that placeholder — this is a real answer, not a failure).
+- **Themeless project** (no Frame) → a registered Motion Graphic Component choice: **one ```json fence** and nothing else, either `{"component": "<id from the brief's catalogue>", "props": {...}}`, or `{"custom": true}` when no listed Motion Graphic Component carries the content (then call `compose_block_brief` again with `format: "html"` to get the free-form contract and build it by hand), or `null` when the moment genuinely deserves no Motion Graphic. The JSON key `component` names the actual upper-level Component concept.
 
 Follow every rule in the contract — sizing, tokens, allowed CSS, animation constraints. Two contract-level facts worth pinning:
 

@@ -18,8 +18,8 @@ The MCP endpoint is `https://pireel.com/api/studio/mcp`. Auth is OAuth — the a
 
 ## The composition: two kinds of elements
 
-- **Overlay blocks** — designed graphic fragments laid over the video: metric cards, comparisons, charts, flow/structure diagrams, KPIs, callouts, titles. Designed graphics are the main event of a Pireel video. Blocks marked `待配图` in state are **placeholders**: empty slots dropped by `lay_out`, waiting to be filled with a generated graphic.
-- **Video shots** — segments of the talking-head clip, each with a framing *treatment*: `full` (full screen), `punch-in` (zoom for emphasis), `corner-br` / `corner-tl` (shrink to a corner to make room for graphics), `split-l` / `split-r` / `split-t` / `split-b` (video takes that half, graphics take the other — the split axis follows the canvas: portrait splits top/bottom, landscape splits left/right; when making room, portrait prefers a split first, landscape a corner first). Shot boundaries are hard jump cuts; visual variety comes from framing changes, not transitions.
+- **Components / overlay blocks** — Component is the broad extensible visual-element concept. Motion Graphics are its primary current family: kinetic words, one-number reveals, data stories, logo stings, overlays and real-source highlights. The editor stores Components as blocks. Blocks marked `待配图` in state are **placeholders**: empty slots dropped by `lay_out`, waiting to be filled with a generated visual.
+- **Video shots** — segments of the talking-head clip, each with a framing *treatment*: `full` (full screen), `punch-in` (zoom for emphasis), `corner-tl` / `corner-tr` / `corner-bl` / `corner-br` (shrink to any corner to make room for graphics), `split-l` / `split-r` / `split-t` / `split-b` (video takes that half, graphics take the other — the split axis follows the canvas: portrait splits top/bottom, landscape splits left/right; when making room, portrait prefers a split first, landscape a corner first). Shot boundaries are hard jump cuts; visual variety comes from framing changes, not transitions.
 
 ## The two clocks (get this wrong and cuts land in the wrong place)
 
@@ -97,7 +97,7 @@ When the user points at a LOCAL video file path, load the `asset-import` skill �
 
 - The request is ambiguous or names an element that doesn't exist — ask ONE short clarifying question, don't guess.
 - Aggressive shortening, restructuring, highlight/short-version, or a generated hook — confirm target length, structure, and what to preserve BEFORE cutting.
-- Before the FIRST full-draft pipeline run, recommend 1–2 fitting frames from `list_frames` and let the user pick (or skip). Never block small edits on this question. When you recommend themes, also mention the user can browse and filter the FULL theme library themselves in the studio's assets / components panel.
+- Before the FIRST full-draft pipeline run, recommend 1–2 fitting frames from `list_frames` and let the user pick (or skip). Never block small edits on this question. When you recommend themes, also mention the user can browse and filter the FULL theme library themselves in the Studio's visual-style panel; Motion Graphics remain a separate editing layer.
 - PROJECTS (no browser): offline tools act on your ACTIVE project = the most-recently-touched one. `list_projects` shows all (newest first = active); `switch_project {project_id}` makes a different one active and returns its state; `create_project` starts a fresh empty one (immediately active); `rename_project` retitles. If get_state reports "no cloud project", call `create_project` (or `import_media`) — don't send the user to a browser just to create one.
 - `studio_not_open` / `studio_tab_closed` — first try opening a tab yourself (`create_browser_handoff` → built-in browser); only ask the user to open/re-focus the project if you have no embedded browser.
 
