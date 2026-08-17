@@ -10,7 +10,8 @@
  * B-roll (--broll): streamed into the open tab over the same loopback path and kept in
  * device-local OPFS; insert_clip resolves its sig locally. Images (png/jpg/webp/gif): streamed into the open tab and kept in its
  * OPFS library; composed blocks persist only a pireel-local-image: identity. Audio (mp3/m4a/wav/flac/
- * ogg): uploaded into the cloud asset library and returns a url for set_bgm.
+ * ogg): streamed into the same device-local OPFS library and returned as a registration for the
+ * typed narration/music/SFX lanes.
  * Metadata probing (ffprobe) + audio transcription (ffmpeg) are optional.
  *
  * Usage (normal flow — the agent gets `token` from the `import_media` MCP tool):
@@ -29,13 +30,13 @@
  * Without ffprobe: duration/dims unknown (browser completes them on open).
  * Without ffmpeg: no transcript. Nothing is lost — only deferred.
  *
- * Zero npm dependencies; requires Node >= 20 (fs.openAsBlob).
+ * Zero npm dependencies; requires Node >= 20.
  */
 
 import { spawnSync } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
-import { openAsBlob, createReadStream } from 'node:fs';
+import { createReadStream } from 'node:fs';
 import { stat, readFile, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
@@ -56,8 +57,8 @@ const TRANSFER_MATRIX = [
   'Transcription audio: a small AAC is uploaded to the cloud (transcription needs a fetchable URL)',
   'B-roll (--broll):    local loopback → the OPEN Studio tab / OPFS, NOT uploaded to the cloud',
   'Images:              local loopback → the OPEN Studio tab / OPFS, NOT uploaded to the cloud',
-  'Audio:               uploaded to the cloud asset library (set_bgm places it on the music lane)',
-  'Requires a Studio tab OPEN for main video, B-roll and images. No cloud fallback for local bytes.',
+  'Audio:               local loopback → the OPEN Studio tab / OPFS, NOT uploaded to the cloud',
+  'Requires a Studio tab OPEN for main video, B-roll, images and audio. No cloud fallback for local bytes.',
 ];
 if (has('explain')) {
   console.log(TRANSFER_MATRIX.join('\n'));
@@ -197,36 +198,47 @@ async function importImage(path, bins) {
   }
 }
 
-/** Music / SFX → cloud asset library (presign → PUT → register); the
- *  returned url is what set_bgm takes. Nothing here is transcribed or probed for a timeline:
- *  an audio asset is a thing you place, not footage you cut. */
+/** Narration / music / SFX → the open Studio tab's OPFS library. The helper returns
+ *  a complete register_media item; the agent chooses the semantic audio lane at placement. */
 async function importAudio(path, bins) {
   const st = await stat(path);
   const ext = path.toLowerCase().match(/\.(mp3|m4a|aac|wav|flac|ogg|opus|weba)$/)?.[1] ?? '';
   const mime = AUDIO_MIME[ext];
+  const sig = `${basename(path)}:${st.size}:${Math.round(st.mtimeMs)}`;
   const meta = bins.ffprobe ? probe(bins.ffprobe, path) : null;
   console.error(`[pireel-import] ${basename(path)} · audio · ${(st.size / 1048576).toFixed(1)}MB${meta?.durationSec ? ` · ${meta.durationSec.toFixed(1)}s` : ''}`);
-  const pre = await media({ action: 'put-audio-asset', size: st.size, content_type: mime });
-  if (!pre.ok) fail(`audio presign failed (HTTP ${pre.status}): ${JSON.stringify(pre.json)}`);
-  const put = await fetch(pre.json.url, {
-    method: 'PUT',
-    headers: { 'Content-Type': mime, 'Cache-Control': pre.json.cache_control ?? 'public, max-age=2592000, immutable' },
-    body: await openAsBlob(path, { type: mime }),
-    duplex: 'half',
-  });
-  if (!put.ok) fail(`audio upload failed: HTTP ${put.status}`);
-  const reg = await media({ action: 'register-audio-asset', key: pre.json.key, label: basename(path) });
-  if (!reg.ok || !reg.json.ok) fail(`audio register failed: ${reg.json.error ?? `HTTP ${reg.status}`}`);
-  if (reg.json.url) console.error('[pireel-import] audio in asset library — place it with set_bgm {url}');
-  else console.error('[pireel-import] audio stored, but no public media base — set_bgm cannot fetch it; configure a public media base');
+  const server = await startLocalServer(path, mime);
+  try {
+    const reg = await media({
+      action: 'register-local-assets',
+      entries: [{ sig, local_url: server.url, filename: basename(path), mime }],
+    });
+    if (!reg.ok || !reg.json.ok) {
+      if (reg.json.error === 'studio_not_open') {
+        fail('the studio tab is not open. Local audio stays on this device, so open the target Studio project and retry.');
+      }
+      fail(`local audio register failed: ${reg.json.error ?? `HTTP ${reg.status}`}`);
+    }
+  } finally {
+    await server.close();
+  }
+  const assetId = `local_audio_${createHash('sha256').update(sig).digest('hex').slice(0, 12)}`;
+  const registration = {
+    id: assetId,
+    kind: 'audio',
+    localSig: sig,
+    label: basename(path),
+    ...(meta?.durationSec ? { durationSec: meta.durationSec } : {}),
+  };
+  console.error('[pireel-import] audio stored in the Studio local library · no cloud upload');
   return {
     file: basename(path),
     kind: 'audio',
-    key: reg.json.key,
-    url: reg.json.url,
-    url_kind: reg.json.url_kind,
+    sig,
+    delivery: 'local',
+    registration,
     ...(meta?.durationSec ? { duration_sec: meta.durationSec } : {}),
-    next: 'call set_bgm {url, startSec?} (needs the studio tab open)',
+    next: 'Pass registration unchanged as one register_media.assets item, then place it with add_clips using role narration, music or sfx to match the user intent.',
   };
 }
 

@@ -1,9 +1,9 @@
 ---
 name: asset-import
-description: Use when the user points at a LOCAL video, B-roll, image or audio file (a path like /Users/..., C:\..., or a chat attachment materialized as a file) that should be used in Pireel Studio. Covers streaming local visual media straight into the OPEN Studio tab over the user's machine (no cloud upload), registering it in device-local OPFS, optional metadata probing and transcription via ffmpeg/ffprobe, and when the studio tab must be open.
+description: Use when the user points at a LOCAL video, B-roll, image or audio file (a path like /Users/..., C:\..., or a chat attachment materialized as a file) that should be used in Pireel Studio. Covers streaming local media straight into the OPEN Studio tab over the user's machine (no cloud upload), registering it in device-local OPFS, optional metadata probing and transcription via ffmpeg/ffprobe, and when the studio tab must be open.
 ---
 
-# Asset Import — local video into Pireel
+# Asset Import — local media into Pireel
 
 When the user gives a local video path ("把 ~/Desktop/talk.mp4 剪一下"), do NOT tell them to open the browser and upload manually — import it yourself with the bundled helper script, then edit through the normal Pireel tools.
 
@@ -17,9 +17,9 @@ This is the authoritative statement — tool descriptions and other references m
 | Transcription audio | a small AAC is uploaded to the cloud (Pireel's transcription needs a URL it can fetch) |
 | **B-roll (`--broll`)** | **localhost → the OPEN Studio tab → device-local OPFS; `insert_clip` resolves its sig locally — NOT uploaded to R2** |
 | **Images** | **localhost → the OPEN Studio tab → device-local OPFS; project stores only a local locator — NOT uploaded to R2** |
-| Audio (music/SFX) | uploaded to the cloud asset library (`set_bgm` places it on the music lane) |
+| **Audio (narration/music/SFX)** | **localhost → the OPEN Studio tab → device-local OPFS; `register_media` + `add_clips` place it on the matching typed audio lane — NOT uploaded to R2** |
 
-**Because main video, B-roll and image bytes stream straight into the browser, a Studio tab MUST be open before you import them.** If none is, the helper exits with `studio_not_open` — open one (call `create_browser_handoff` and open the URL in your own in-app browser, or ask the user to open the project) and re-run the helper. There is no cloud fallback for user-local visual media.
+**Because user-local media streams straight into the browser, a Studio tab MUST be open before you import it.** If none is, the helper exits with `studio_not_open` — open one (call `create_browser_handoff` and open the URL in your own in-app browser, or ask the user to open the project) and re-run the helper. There is no cloud fallback for user-local media.
 
 ## Two ways in (both keep the video local)
 
@@ -60,16 +60,16 @@ The JSON keeps video import and transcription outcomes separate. `transcription.
 
 Never interpret `transcript: 0` alone as “the video has no speech.” Check `transcription.status`: for `failed`, surface the error and recover it (for example, let the user add credits for `insufficient_tokens`, then run `extract_asr` in the open Studio tab). Do not repeatedly re-import the local video just to retry transcription.
 
-Full flow: open a tab if none is → `import_media` (no args, MCP) → token → run helper with `--token` → read the JSON → `get_state`.
+Full flow: open a tab if none is → `import_media` (no args, MCP) → token + `base_url` → run helper with both `--base` and `--token` → read the JSON → `get_state`.
 
 ```bash
-node <pireel-skill-dir>/scripts/import-media.mjs --token <import-token> /path/to/video.mp4
-# options: --base https://pireel.com · --ffmpeg/--ffprobe <path> · --no-transcribe
+node <pireel-skill-dir>/scripts/import-media.mjs --base <base_url> --token <import-token> /path/to/video.mp4
+# options: --ffmpeg/--ffprobe <path> · --no-transcribe
 ```
 
 **Run the helper OUT of sandbox by default** — it needs the user's local file paths and network access to the Pireel endpoint; request approval instead of attempting a sandboxed run first. When transcription is enabled, the approval description must say that the main video remains local while its extracted AAC is uploaded for cloud ASR. A sandboxed `connection refused` does not mean the server is down.
 
-Auth — no user action needed: call the `import_media` MCP tool **with no arguments** first; it returns a short-lived (30 min) import `token`. Pass that to the helper via `--token`. Never pass OAuth tokens to shell commands.
+Auth — no user action needed: call the `import_media` MCP tool **with no arguments** first; it returns a short-lived (30 min) import `token` and the exact `base_url` for the connected production/preview environment. Pass both to the helper. Never guess the environment from documentation and never pass OAuth tokens to shell commands.
 
 ## ffmpeg / ffprobe
 
@@ -99,17 +99,17 @@ The returned `url_kind` is `local` and the locator starts with `pireel-local-ima
 
 This is deliberately device-local. On a different browser/device the project keeps its locator but cannot render the image until the user imports the same file there. Never work around that by uploading the file or substituting another image.
 
-## Audio (music / sound effects)
+## Audio (narration / music / sound effects)
 
-A local audio file (`.mp3`/`.m4a`/`.aac`/`.wav`/`.flac`/`.ogg`, ≤ 200MB) passed to the same helper goes to the asset library and comes back with a `url`:
+A local audio file (`.mp3`/`.m4a`/`.aac`/`.wav`/`.flac`/`.ogg`, ≤ 200MB) passed to the same helper streams over localhost into the open tab's OPFS library. It comes back with a `registration` object containing its stable local signature and measured duration:
 
 ```
 node import-media.mjs --token … /path/to/track.mp3
 ```
 
-Then place it with `set_bgm {url, startSec?}` — the level auto-balances against the measured narration loudness, and the receipt returns a `trackId` for later adjustments (volume, fades, speed, mute, `headSec`/`tailSec` trims, `splitAtSec`). It needs the studio tab open: the bytes are fetched into the browser, which is also what makes them survive later sessions.
+Pass `registration` unchanged as one item in `register_media.assets`, then place it with `add_clips`. Choose `role: "narration"`, `"music"` or `"sfx"` from the user's intent; do not route spoken teaching audio through `set_bgm`. The typed clip can then be trimmed, split, muted, leveled, faded or speed-adjusted like other timeline media.
 
-Nothing is transcribed or probed for a timeline here — an audio asset is something you place, not footage to cut. Music the user already owns is in `list_assets {kind: "audio"}`; bring your own file only when they point at one.
+The helper probes duration but does not automatically transcribe standalone audio. When meaning or performed timing matters, call `extract_asr` with its exact `localSig` or registered `assetId`. The original bytes remain device-local; only the compressed ASR payload follows Pireel's disclosed transcription path when ASR is requested.
 
 ## B-roll (insert a clip into the timeline)
 
