@@ -22,6 +22,18 @@ codex plugin marketplace add https://github.com/pireel/pireel-agent
 codex plugin add pireel@pireel-marketplace
 ```
 
+To test the unreleased Plugin against the isolated Pireel Preview environment,
+install the repository's `preview` branch as a separate marketplace:
+
+```bash
+codex plugin marketplace add pireel/pireel-agent --ref preview
+codex plugin add pireel@pireel-preview
+```
+
+The preview and production plugins both register the `pireel` MCP server, so keep
+only one installed at a time. Start a new chat after installing or switching
+channels so the host loads the selected Plugin and MCP configuration.
+
 Then tell your agent:
 
 > Set up Pireel and help me edit my first video.
