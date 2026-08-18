@@ -59,13 +59,17 @@ Use transitions sparingly. Hard cuts, action matches, scale changes, source soun
 
 Use `create_output` for genuinely independent concepts and `duplicate_output` for controlled variations of an approved master. Use `switch_output` and `rename_output` so the user can understand the family. Re-read `get_state` after every switch because timeline ids are output-local.
 
-Create a representative pilot before multiplying uncertain claims, audio, generation, Frame treatment, or layout. Once the pilot is coherent, expand the family in small logical batches. Each output must have a distinct hypothesis, such as mechanism-first versus creator-first, rather than a different color or random shot order.
+Create a representative pilot before multiplying uncertain claims, audio, generation, Frame treatment, or layout. Derive its creative thesis, rhythm arc, whole-film video design system and Scene progression from the actual actions and evidence in the footage. Present that proposal and wait for approve/reject before publishable-looking construction. After approval, persist it with `set_director_plan`; every Scene must name its visual anchor, full-canvas treatment, motion/payoff/exit, sound hierarchy, asset strategy and explicit B-roll decision. Once the pilot is coherent and reviewed, expand the family in small logical batches. Each output must have a distinct hypothesis, such as mechanism-first versus creator-first, rather than a different color or random shot order.
+
+When a Scene earns a Motion Graphic, decide its real region and what picture it overlays before generation. Pass `sceneId`, timing, `placement` and `backdrop` into `compose_block_brief`, then copy its target unchanged to `apply_block`. Do not generate standalone cards and scatter them over an already assembled montage.
 
 For local B-roll, follow `asset-import.md`: the helper streams each file over localhost into the open Studio tab's OPFS, and `insert_clip {sig}` places it without an R2 upload.
 
 ## Review the result as a viewer
 
-Inspect representative opening, proof, and ending moments in every output. Use `capture_frame` for visual verification and check the active output with `get_state` after structural mutations. Confirm:
+Inspect representative opening, proof, and ending moments in every output. Use `review_sequence` for the
+complete pilot and each finished output; use `capture_frame` only for one small local change. Check the
+active output with `get_state` after structural mutations. Confirm:
 
 - the opening is clear and supported;
 - product identity and important actions are legible at phone size;

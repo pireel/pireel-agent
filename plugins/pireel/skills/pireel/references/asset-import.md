@@ -83,7 +83,7 @@ Resolution order: `--ffmpeg`/`--ffprobe` flags → `FFMPEG_PATH`/`FFPROBE_PATH` 
 
 If the package manager itself is unavailable or the install command is denied, THEN fall back to a degraded import and tell the user what was skipped. Capability tiers:
 
-- **Both available**: full import — duration/dims registered, transcript ready; transcript-based offline editing (read_script / cut_narration / plan_brief / set_captions) works immediately, before any browser is opened.
+- **Both available**: full import — duration/dims registered, transcript ready; transcript-based editing (`read_script`, `cut_narration`, Director planning, captions) can start immediately.
 - **ffprobe only**: metadata registered, no transcript. Transcription happens later in the browser (`extract_asr`).
 - **Neither**: the video still streams into the open tab and registers; only metadata/transcript are deferred (the browser completes dimensions on load, and `extract_asr` produces the transcript later). Nothing is lost, just deferred.
 
@@ -128,8 +128,8 @@ This serves the bytes once over localhost, stores them in the open tab's device-
 ## After import
 
 - Call `get_state` — the new/updated project is now the latest, so offline tools target it.
-- If a transcript was registered (`transcript > 0` in the helper output), go straight to transcript work: `read_script`, cleanup via the talking-head-cleanup skill, `plan_brief` → `submit_plan`.
-- The tab was already open for the import (that's how the bytes got in), so the live bridge is connected — storyboarding (`lay_out`), visual analysis, and Pireel-side generation are all available. If the user later reopens the project on a DIFFERENT device (where the local bytes aren't cached), the video won't auto-return — they re-pick the file. Cross-device video persistence is a deliberate non-goal of this path.
+- If a transcript was registered (`transcript > 0` in the helper output), use `read_script`; for a complete edit follow `storyboard-draft.md`, propose the whole-film design, obtain approval, then save it with `set_director_plan` before broad timeline work.
+- The tab was already open for the import, so media-byte analysis, rendered review and local execution are available. If the user later reopens the project on a DIFFERENT device (where the local bytes aren't cached), the video won't auto-return — they re-pick the file. Cross-device video persistence is a deliberate non-goal of this path.
 
 ## When NOT to use the helper
 

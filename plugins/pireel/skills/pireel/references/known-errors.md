@@ -1,6 +1,6 @@
 ---
 name: known-errors
-description: Meaning and recovery steps for every known Pireel MCP error — studio_not_open, studio_tab_closed, tool_timeout, HTTP 401/409, apply_block lint rejections, and submit_plan validation failures. Use whenever a pireel tool call fails, errors, or hangs, before retrying anything.
+description: Meaning and recovery steps for common Pireel MCP errors — studio_not_open, studio_tab_closed, tool_timeout, HTTP 401/409, Director Plan validation and apply_block lint rejection. Use whenever a Pireel tool call fails, errors, or hangs, before retrying anything.
 ---
 
 # Known errors and recovery
@@ -11,7 +11,7 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 
 **Meaning**: no studio tab is connected to the bridge. The user does not have their Pireel studio project open in a browser, or the tab hasn't finished connecting.
 
-**Recovery**: data-level tools (cuts, block edits, captions, BYO compose/apply, plan) automatically fall back to OFFLINE MODE — they edit the user's most recently updated cloud project directly (the result carries `offline: true` and the project name; changes appear next time the project is opened). But offline is a fallback, not the default flow: before cutting, open the editor — first choice is your built-in REAL browser made visible (`create_browser_handoff`; the user watches edits land live), headless only if that's all you have, and with no browser ask the user to open the project — don't silently edit a video nobody can see and only offer a preview afterwards. Only video-dependent tools hard-fail with this error: `extract_asr`, `analyze_visual`, `capture_frame`, `lay_out`, and Pireel-LLM generation. For those, open a tab yourself: call `create_browser_handoff` and open the returned `url` with your OWN built-in/embedded browser tool — never via the OS `open` command or the user's default browser (single-use ticket; a surface you cannot see wastes it and leaves you blind). Pre-signed-in, ~60s, never show it to the user. If you have no embedded browser, ask the user to open their studio project at https://pireel.com instead. Do not blind-retry the same call — the answer will not change until a tab connects.
+**Recovery**: data-level tools (timeline edits, cuts, block edits, captions, BYO compose/apply and Director Plan) can fall back to OFFLINE MODE against the active cloud project. But offline is a fallback, not the default flow: before consequential editing, open the editor through `create_browser_handoff` in your own visible embedded browser. Media-byte analysis, rendered capture/review, local-file materialization and browser export require the live tab. Never blind-retry—the answer cannot change until a tab connects.
 
 ## `studio_tab_closed`
 
@@ -46,17 +46,17 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 
 **Recovery**: the failure receipt returns a `blockId` (the id the block WILL have). Fix ONLY the listed issues in your generated text, **scope every CSS selector under `#<that blockId>`**, and call `apply_block` again passing that same `blockId` back verbatim (plus the same `atSec`). Reusing the id keeps the scope target stable across retries — for a brand-new block, do NOT omit `blockId` on the retry or a fresh id is minted and the scope never matches. Do not regenerate from scratch or change unrelated parts. If issues persist after 2–3 targeted fixes, re-read the `compose_block_brief` contract; last resort, `add_block`/`edit_block` (charges Pireel credits — say so).
 
-## `submit_plan` rejection
+## `set_director_plan` rejection
 
-**Meaning**: no scenes survived validation (scene ranges are clamped to the sentence count; an empty result is rejected).
+**Meaning**: the whole-film design contract or one Scene is incomplete/invalid. The error identifies a precise path such as a missing rhythm arc, design-system field, visual anchor, treatment, motion/sound/asset plan, B-roll decision, non-positive duration or overlapping interval.
 
-**Recovery**: regenerate the DraftPlan against the `plan_brief` contract — the usual cause is scene indices that don't match the transcript's sentence numbering — then `submit_plan` again. Fallback: `analyze_narration` (charges credits).
+**Recovery**: repair only the named field from the approved proposal, preserve the rest, and call `set_director_plan` again. Do not weaken the plan to chapter titles or invent evidence merely to satisfy validation.
 
 ## `instruction required` (from `compose_block_brief`)
 
-**Meaning**: you called it without an `instruction` on a target that isn't a placeholder — only `待配图` placeholders carry their own design spec.
+**Meaning**: every Component generation/rewrite needs a concrete communicative instruction; no implicit placeholder specification was supplied.
 
-**Recovery**: re-call with a concrete `instruction`, or double-check the `blockId` really is a placeholder in `get_state`.
+**Recovery**: re-call with a concrete `instruction`. For new work also decide timing, placement, backdrop/protected zones and the approved `sceneId` before requesting the brief.
 
 ## `unknown tool` / invalid-params JSON-RPC errors (-32602)
 

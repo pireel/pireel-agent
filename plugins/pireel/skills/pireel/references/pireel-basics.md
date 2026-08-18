@@ -5,7 +5,7 @@ description: Core mental model and tool routing for editing videos in Pireel Stu
 
 # Pireel Studio basics
 
-Pireel Studio (https://pireel.com) is a video editor for **talking-head videos** (any aspect — the canvas follows the source footage). Through the `pireel` MCP server your tools edit the composition **live in an open studio browser tab**: the timeline updates on screen as you work. You can open that tab YOURSELF: call `create_browser_handoff` and open the returned `url` with your OWN built-in/embedded browser tool — the browser whose pages you can see and control. NEVER open it via the OS `open` command or the user's default browser: the ticket is single-use, so spending it on a surface you cannot see wastes it and leaves you blind. The tab is pre-signed-in (no login screen) and becomes the live editing surface. Surface the editor early on substantial work: the user watches every edit land in real time. The handoff URL expires in ~60s — open it immediately, never print it to the user (it carries a sign-in ticket; share plain `https://pireel.com/zh/studio/<id>` links instead).
+Pireel Studio (https://pireel.com) is a multi-source, multi-track video editor for speech-led edits, lessons, product stories, ads and montages. Through the `pireel` MCP server your tools edit the composition **live in an open studio browser tab**: the timeline updates on screen as you work. You can open that tab YOURSELF: call `create_browser_handoff` and open the returned `url` with your OWN built-in/embedded browser tool — the browser whose pages you can see and control. NEVER open it via the OS `open` command or the user's default browser: the ticket is single-use, so spending it on a surface you cannot see wastes it and leaves you blind. The tab is pre-signed-in (no login screen) and becomes the live editing surface. Surface the editor early on substantial work: the user watches every edit land in real time. The handoff URL expires in ~60s — open it immediately, never print it to the user (it carries a sign-in ticket; share plain `https://pireel.com/zh/studio/<id>` links instead).
 
 **Keep the editor in YOUR browser, visible, and open — get this right the first time.** Three failure modes that make you look broken to the user:
 1. **Wrong surface.** Opening the handoff URL means opening it in the browser YOU can see and control. Do NOT let it route to an already-connected external Chrome or the user's default browser — if a Chrome tab is already bridged, opening there leaves you blind and the user sees their own browser being driven. Force it into your OWN embedded browser.
@@ -16,10 +16,12 @@ These are your host's own browser-runtime controls, not Pireel MCP tools — use
 
 The MCP endpoint is `https://pireel.com/api/studio/mcp`. Auth is OAuth — the agent's `mcp login` / first-use flow opens the browser; there are no API keys. On HTTP 401, re-run the OAuth login.
 
-## The composition: two kinds of elements
+## The composition: timeline layers inside designed Scenes
 
-- **Components / overlay blocks** — Component is the broad extensible visual-element concept. Motion Graphics are its primary current family: kinetic words, one-number reveals, data stories, logo stings, overlays and real-source highlights. The editor stores Components as blocks. Blocks marked `待配图` in state are **placeholders**: empty slots dropped by `lay_out`, waiting to be filled with a generated visual.
+- **Components / overlay blocks** — Component is the broad extensible visual-element concept. Motion Graphics are its primary current family: kinetic words, one-number reveals, data stories, logo stings, overlays and real-source highlights. The editor stores Components as blocks. They are layers inside a composed Scene, not the Scene itself.
 - **Video shots** — segments of the talking-head clip, each with a framing *treatment*: `full` (full screen), `punch-in` (zoom for emphasis), `corner-tl` / `corner-tr` / `corner-bl` / `corner-br` (shrink to any corner to make room for graphics), `split-l` / `split-r` / `split-t` / `split-b` (video takes that half, graphics take the other — the split axis follows the canvas: portrait splits top/bottom, landscape splits left/right; when making room, portrait prefers a split first, landscape a corner first). Shot boundaries are hard jump cuts; visual variety comes from framing changes, not transitions.
+- **Typed timeline clips** — narrative, ordinary visual media, graphics, audio and captions live on explicit tracks. `get_timeline` is the canonical read surface; generic insert/move/resize/split/delete operations address selected clips rather than assuming one special main lane.
+- **Director Scenes** — a saved complete-edit plan divides the viewing experience by changes in viewer task or visual anchor. Each Scene inherits one whole-film design system and owns the timeline layers that execute it.
 
 ## The two clocks (get this wrong and cuts land in the wrong place)
 
@@ -34,18 +36,18 @@ Shots tagged `[clip X]` in state were inserted from a **different source file**:
 
 - **Always call `get_state` before your first edit**, and again whenever you are unsure what the timeline looks like. Every mutation invalidates your previous snapshot. Tool receipts describe what each call changed — trust them for the ids they mention.
 - The transcript is NOT in `get_state`. Fetch it via `read_script` (or reuse an `extract_asr` receipt). Don't call both; don't re-fetch it after cuts (source clock, remember).
-- `get_state` also reports a **Pipeline line** (transcript / narration plan / visual analysis done or not) — use it to skip pipeline stages that already ran.
 - Never invent block/shot ids. Only use ids from `get_state` or tool receipts.
 
 ## You are the model (BYO-brain — the default generation path)
 
+For a complete edit, read `storyboard-draft.md` before mutating the timeline. It defines the shared whole-film method: inspect the material, propose a creative thesis/rhythm/video design system and Scene progression, wait for approval, persist it with `set_director_plan`, execute, then review temporal states and sound.
+
 All text/HTML generation is done by YOUR model, not Pireel's:
 
-- **Block HTML** (fill a placeholder / rewrite a block / new element): `compose_block_brief` → it returns the full `{system, prompt}` contract → generate the response yourself following it exactly (one short note, then a ```html fence, then a ```js fence) → submit the raw text via `apply_block`. If `apply_block` rejects with lint issues, fix ONLY those issues and re-apply. See the `compose-blocks` skill.
+- **Component content** (rewrite / new element): first decide the actual Scene, timing, placement, backdrop and protected subjects; `compose_block_brief` → it returns the full `{system, prompt}` contract with real box and design context → generate the response yourself → submit it via `apply_block` with the returned target unchanged. If lint rejects it, fix only those issues and re-apply. See `compose-blocks.md`.
 - **Icons**: `get_icons {names}` returns inline SVGs — never hand-draw semantic icons, no emoji on canvas.
-- **Narration planning**: `plan_brief` → generate the DraftPlan JSON yourself per its contract → `submit_plan` → `lay_out` consumes it. See the `storyboard-draft` skill.
 
-Four tools run **Pireel's own LLM and charge the account's credits**: `add_block`, `edit_block`, `add_graphics`, `analyze_narration`. They are fallbacks ONLY — use them if the BYO flow fails repeatedly, never as the first choice.
+Hosted generation tools whose descriptions carry a charge marker use Pireel credits. `add_block` and `edit_block` are fallbacks for agents that cannot perform the BYO brief/apply flow; `analyze_visual` is a hosted vision fallback. Never infer charging from a remembered list—read the current tool description.
 
 ## Tool routing table
 
@@ -59,7 +61,7 @@ Four tools run **Pireel's own LLM and charge the account's credits**: `add_block
 | Copy an overlay | `duplicate_block` |
 | Inspect a block's actual HTML/animation | `get_block` (before precise edits or content questions) |
 | Show the user an element | `focus_element` (after creating/changing something) |
-| New graphic / rewrite a graphic | `compose_block_brief` → generate → `apply_block` (fallback: `add_block` / `edit_block`, burns credits) |
+| New graphic / rewrite a graphic | Decide Scene/timing/placement/backdrop → `compose_block_brief` → generate → `apply_block` (fallback: hosted `add_block` / `edit_block`) |
 | Video framing / zoom | `set_shot_treatment` |
 | Color-grade a shot | `set_video_filter` (brightness/contrast/saturate, 1 = untouched) |
 | Shot sound — quiet or mute a shot's own audio (e.g. B-roll under narration) | `set_shot_audio` (`volumeDb` -60..0 and/or `mute`; batch via `shotIds`/`all:true`) |
@@ -76,7 +78,7 @@ Four tools run **Pireel's own LLM and charge the account's credits**: `add_block
 | Judgment-based speech cleanup (fillers, retakes, tighten) | `read_editing_guide` once, then its workflow — or use the `talking-head-cleanup` skill directly |
 | Subtitles on/off/restyle | `set_captions` (18 presets), `remove_captions` — see the `captions` skill |
 | Themes | `list_frames` → `attach_frame` → `read_frame {frame_id}` |
-| Full draft from a fresh video | pipeline in the `storyboard-draft` skill |
+| Complete first cut / finished video | whole-film design and approval method in `storyboard-draft.md` |
 | Open the live editor (your browser, pre-signed-in) | `create_browser_handoff` → open `url` in the built-in browser |
 | User rejects a change | `undo` (one step per call; doesn't cover the user's manual drags) |
 
@@ -91,13 +93,14 @@ When the user points at LOCAL video, image or audio paths, load the `asset-impor
 ## Seeing and offline mode
 
 - `capture_frame {atSec}` renders one frame (video + framing + overlays) as an image — your eyes. Verify visual work after `apply_block`, caption, or framing changes, then fix what looks wrong. Needs the studio tab open.
-- When the tab is closed, data-level tools (cuts, block edits, captions, BYO compose/apply, plan) run in OFFLINE MODE against the user's most recently updated cloud project (results carry `offline: true`). Offline is a fallback, not the default: BEFORE cutting, open the editor — first choice is your built-in REAL browser made visible (`create_browser_handoff`; the user watches edits land live), headless only when you have no visible surface (it still unlocks every visual tool — say so and offer a preview link), and with no browser at all ask the user to open the project — don't silently edit a video nobody can see and only offer a preview afterwards. Video-dependent tools (`extract_asr`, `visual_brief`, `analyze_visual`, `capture_frame`, `lay_out`, `export_video`, Pireel-LLM generation) always need the tab.
+- `review_sequence` renders the approved Director Scenes at entrance, development, payoff and exit states in time order, reports deterministic structure/audio problems, and returns exact Scene repair scopes. Use it for complete edits and Scene-level batches; inspect every attached image as a sequence rather than certifying one attractive midpoint.
+- When the tab is closed, data-level tools (timeline edits, cuts, block edits, captions, BYO compose/apply and Director Plan) run in OFFLINE MODE against the user's most recently updated cloud project (results carry `offline: true`). Offline is a fallback, not the default: before consequential editing, open the editor so the user can watch. Media-byte analysis, rendered capture/review, local-file materialization and browser export need the live tab.
 
 ## When to ask the user instead of acting
 
 - The request is ambiguous or names an element that doesn't exist — ask ONE short clarifying question, don't guess.
 - Aggressive shortening, restructuring, highlight/short-version, or a generated hook — confirm target length, structure, and what to preserve BEFORE cutting.
-- Before the FIRST full-draft pipeline run, recommend 1–2 fitting frames from `list_frames` and let the user pick (or skip). Never block small edits on this question. When you recommend themes, also mention the user can browse and filter the FULL theme library themselves in the Studio's visual-style panel; Motion Graphics remain a separate editing layer.
+- Before a consequential complete design with no Frame, inspect the material and recommend 1–2 fitting Frames plus themeless when visual direction is genuinely unresolved; wait for the choice. Never block a small local edit on this. Motion Graphics remain a separate editing layer inside the resulting Scenes.
 - PROJECTS (no browser): offline tools act on your ACTIVE project = the most-recently-touched one. `list_projects` shows all (newest first = active); `switch_project {project_id}` makes a different one active and returns its state; `create_project` starts a fresh empty one (immediately active); `rename_project` retitles. If get_state reports "no cloud project", call `create_project` (or `import_media`) — don't send the user to a browser just to create one.
 - `studio_not_open` / `studio_tab_closed` — first try opening a tab yourself (`create_browser_handoff` → built-in browser); only ask the user to open/re-focus the project if you have no embedded browser.
 

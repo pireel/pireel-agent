@@ -27,7 +27,7 @@ This one skill covers the whole product. Skim the essentials below, then **open 
 | Mix several clips, make product ads, or create multiple editable outputs / variants | `references/montage-variants.md` |
 | Clean up a raw talking-head A-roll (retakes, filler, dead air) | `references/talking-head-cleanup.md` |
 | Add a designed graphic block (BYO HTML) | `references/compose-blocks.md` |
-| Draft a full storyboard in one shot | `references/storyboard-draft.md` |
+| Design or execute a complete first cut / finished video | `references/storyboard-draft.md` |
 | Add / restyle captions | `references/captions.md` |
 | Export an MP4 | `references/export.md` |
 | Answer pricing / credits / plan / UI questions | `references/product-help.md` |
