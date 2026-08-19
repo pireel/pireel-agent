@@ -34,11 +34,26 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 
 **Recovery**: nothing to do — font fetches now fall back through Pireel's own same-origin proxy (the server fetches Google Fonts for the browser), so fonts render properly even in restricted browsers; if even the proxy is unreachable (offline / self-hosted shell with no backend), the frame/export still renders with **system fallback fonts** instead of failing. The video, timeline, cuts and layout are unaffected (all local). If you still see `Failed to fetch` from `capture_frame`, the user's tab is on an older build — a refresh picks up the fix.
 
+## Local helper — `local loopback is unreachable from this browser`
+
+**Meaning**: MCP authentication and the Studio bridge are connected, but the browser hosting Studio cannot reach the agent host's throwaway `127.0.0.1` file server. Some embedded/in-app browser sandboxes isolate loopback; this is different from an API, R2, or ASR failure.
+
+**Recovery**: keep the same project and open one fresh `create_browser_handoff` in a controllable browser that shares the host network (on Codex, prefer connected Chrome when available). Close/release the isolated Studio tab, get one fresh import token, and retry the helper once. Do not upload the original to cloud storage, drive hidden file inputs, or invent another transfer path.
+
 ## HTTP 401
 
-**Meaning**: the OAuth session is missing or expired. This is transport-level — no tool ran.
+**Meaning** depends on where it appeared:
 
-**Recovery**: re-run the OAuth login (`codex mcp login pireel-preview`, or reconnect the Preview server in Claude Code) — the browser opens for consent. There are no API keys to check.
+- An MCP tool call returning 401 means the OAuth session is missing or expired. This is transport-level — no tool ran.
+- The local import helper printing `local ... register failed: HTTP 401` means its short-lived import token was rejected by the connected environment. Re-calling `import_media` once distinguishes an expired token from an environment/access-gate defect.
+
+**Recovery**: for an MCP 401, re-run the OAuth login (`codex mcp login pireel-preview`, or reconnect the Preview server in Claude Code). For a helper 401, obtain one fresh token and retry the helper once. If the fresh token also returns 401, stop and report the environment error; do **not** switch to browser DOM injection, invent a direct-upload script, create carrier media, or install a local transcription stack.
+
+## `server_misconfigured`
+
+**Meaning**: the connected Pireel environment is missing a required server-side binding or secret. For media transcription this commonly occurs before ASR, while preparing the temporary compressed-audio upload.
+
+**Recovery**: stop and report the exact environment and failing operation. Retrying, choosing the same file again, manufacturing a temporary video, or installing/running local Whisper cannot repair server configuration. Preserve the successfully imported local media and resume only after the environment has been fixed.
 
 ## `apply_block` lint rejection
 

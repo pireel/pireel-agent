@@ -23,7 +23,7 @@ This is the authoritative statement — tool descriptions and other references m
 
 ## Two ways in (both keep the video local)
 
-**A. The helper — PRIMARY.** Runs a throwaway localhost server and hands the bytes to the open tab via `register-local`; the tab fetches them over loopback (verified working, including in restricted in-app browsers — every response carries a Content-Type). Works with ANY browser hosting the tab (the user's own Chrome or an agent-driven one) and needs no browser-driving ability from you: one command imports, probes metadata, transcribes, and registers the project. Details below.
+**A. The helper — PRIMARY.** Runs a throwaway localhost server and hands the bytes to the open tab via `register-local`; the tab fetches them over loopback. The browser hosting Studio must share the agent host's `127.0.0.1`. A connected desktop Chrome does; some embedded/in-app browser sandboxes do not. On Codex, prefer connected Chrome for local imports when it is available, while keeping embedded browsers for cloud-only work. The helper itself needs no browser-driving ability from you: one command imports, probes metadata, transcribes, and registers the project. Details below.
 
 **B. Direct injection (fallback — when the helper can't run, and you drive the browser yourself).** No import token, no helper. With an empty studio output open, use the browser's file-chooser bridge from the stable canvas trigger:
 
@@ -40,6 +40,14 @@ Both routes converge after the bytes enter the tab: the same local import sessio
 media, persists it to OPFS, and writes the same metadata-only `localAssets` project index used by
 the Studio picker. Skill imports therefore appear in the same local asset list and participate in
 the same deletion sync and cross-browser “restore access” guidance; only the source adapter differs.
+
+Direct injection is a capability fallback, not an authentication or server-error workaround. If
+the helper reaches Pireel but returns HTTP 401 with a freshly issued import token, or reports
+`server_misconfigured`, stop and surface that infrastructure error. Do not drive hidden file inputs,
+write a custom upload client, create a carrier video, or install a local ASR stack to route around it.
+If it reports `local loopback is unreachable from this browser`, keep the same Preview project,
+open a fresh handoff in one controllable browser that shares the host loopback (on Codex, connected
+Chrome when available), close/release the isolated tab, and retry the helper once with a fresh token.
 
 ## The helper
 
