@@ -9,7 +9,7 @@ Credits are Pireel's metered currency for **its own model calls**. They are orth
 Only tools explicitly marked `[…CHARGES…]` in their MCP description:
 
 - `image-gen` / `video-gen` style generation (video generation additionally requires the Pro plan or higher).
-- Hosted analysis/generation fallbacks such as `add_block`, `edit_block` and `analyze_visual` when their current tool description carries the charge marker.
+- Hosted analysis/generation fallbacks such as `add_block`, `edit_block` and semantic `analyze_visual` when their current tool description carries the charge marker. Geometry-only visual analysis is local and token-free.
 
 **Everything else is free**: import (video + images), transcript-based cutting, captions, themes, shot framing, Director planning, the BYO `compose_block_brief` / `apply_block` flow, capture/review and local export. The default agent workflow costs the user nothing — prefer BYO routes over charging fallbacks.
 

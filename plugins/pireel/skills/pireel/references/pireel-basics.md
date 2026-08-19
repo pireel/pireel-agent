@@ -19,9 +19,9 @@ The MCP endpoint is `https://pireel.com/api/studio/mcp`. Auth is OAuth — the a
 ## The composition: timeline layers inside designed Scenes
 
 - **Components / overlay blocks** — Component is the broad extensible visual-element concept. Motion Graphics are its primary current family: kinetic words, one-number reveals, data stories, logo stings, overlays and real-source highlights. The editor stores Components as blocks. They are layers inside a composed Scene, not the Scene itself.
-- **Video shots** — segments of the talking-head clip, each with a framing *treatment*: `full` (full screen), `punch-in` (zoom for emphasis), `corner-tl` / `corner-tr` / `corner-bl` / `corner-br` (shrink to any corner to make room for graphics), `split-l` / `split-r` / `split-t` / `split-b` (video takes that half, graphics take the other — the split axis follows the canvas: portrait splits top/bottom, landscape splits left/right; when making room, portrait prefers a split first, landscape a corner first). Shot boundaries are hard jump cuts; visual variety comes from framing changes, not transitions.
+- **Video shots** — segments of source video with editable framing. Familiar full/punch/corner/split treatments are convenience recipes, not the design vocabulary. Scene design may combine custom transforms, crops, media, type and Motion Graphics. A hard cut is only one valid boundary; continuity, motivated match/action changes and restrained transitions are derived from adjacent Scene designs rather than added as decoration.
 - **Typed timeline clips** — narrative, ordinary visual media, graphics, audio and captions live on explicit tracks. `get_timeline` is the canonical read surface; generic insert/move/resize/split/delete operations address selected clips rather than assuming one special main lane.
-- **Director Scenes** — a saved complete-edit plan divides the viewing experience by changes in viewer task or visual anchor. Each Scene inherits one whole-film design system and owns the timeline layers that execute it.
+- **Director Scenes** — a saved complete-edit plan divides the viewing experience by changes in viewer task or visual anchor. Each Scene inherits one whole-film design system and owns the timeline layers that execute it. `scene-designs.md` then persists each Scene's open whole-canvas composition, temporal choreography and handoff before those ideas are compiled into atomic edits.
 
 ## The two clocks (get this wrong and cuts land in the wrong place)
 
@@ -40,14 +40,14 @@ Shots tagged `[clip X]` in state were inserted from a **different source file**:
 
 ## You are the model (BYO-brain — the default generation path)
 
-For a complete edit, read `storyboard-draft.md` before mutating the timeline. It defines the shared whole-film method: inspect the material, propose a creative thesis/rhythm/video design system and Scene progression, wait for approval, persist it with `set_director_plan`, execute, then review temporal states and sound.
+For a complete edit, read `storyboard-draft.md` before mutating the timeline. It defines the shared whole-film method: inspect the material, propose a creative thesis/rhythm/video design system, delivery safe-area contract and Scene progression, wait for approval, persist it with `set_director_plan`, progressively author whole-canvas Scene designs with `set_scene_designs`, compile them into the timeline, then review temporal states, boundaries and sound. Read persisted artifacts by affected `sceneIds`; load the whole file only for a whole-edit audit.
 
 All text/HTML generation is done by YOUR model, not Pireel's:
 
 - **Component content** (rewrite / new element): first decide the actual Scene, timing, placement, backdrop and protected subjects; `compose_block_brief` → it returns the full `{system, prompt}` contract with real box and design context → generate the response yourself → submit it via `apply_block` with the returned target unchanged. If lint rejects it, fix only those issues and re-apply. See `compose-blocks.md`.
 - **Icons**: `get_icons {names}` returns inline SVGs — never hand-draw semantic icons, no emoji on canvas.
 
-Hosted generation tools whose descriptions carry a charge marker use Pireel credits. `add_block` and `edit_block` are fallbacks for agents that cannot perform the BYO brief/apply flow; `analyze_visual` is a hosted vision fallback. Never infer charging from a remembered list—read the current tool description.
+Hosted generation tools whose descriptions carry a charge marker use Pireel credits. `add_block` and `edit_block` are fallbacks for agents that cannot perform the BYO brief/apply flow. `analyze_visual {mode:"geometry"}` keeps scene cuts, subject/face tracks and safe-region measurement in the browser with no model tokens; use semantic mode when content, evidence, material choice or complete-edit direction depends on what the pixels mean. Never trade needed semantic judgment for geometry merely to save tokens, and never infer charging from a remembered list—read the current tool description.
 
 ## Tool routing table
 
@@ -84,7 +84,7 @@ Hosted generation tools whose descriptions carry a charge marker use Pireel cred
 
 ## Patience with slow tools
 
-`extract_asr` and `analyze_visual` run **in the user's browser** and can take minutes (visual analysis is frame-by-frame). A slow response is not a failure — do not retry just because a call takes long. Card-type tools have a 10-minute bridge timeout; instant operations time out at 60s.
+`extract_asr` and `analyze_visual` run **in the user's browser** and can take minutes (visual geometry is frame-by-frame; semantic mode adds sparse hosted understanding). A slow response is not a failure — do not retry just because a call takes long. Card-type tools have a 10-minute bridge timeout; instant operations time out at 60s.
 
 ## Local media import
 

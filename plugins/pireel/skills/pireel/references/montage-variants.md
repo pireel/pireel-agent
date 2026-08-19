@@ -33,7 +33,7 @@ Use an explicit mode from the request when available. Otherwise offer these choi
 
 ## Offer a visual system before the pilot
 
-Skill and Frame remain independent: content category never determines a Frame. For a complete creative build with no attached Frame, once you understand the footage and requested visual feeling, call `list_frames` and recommend one or two evidence-based candidates plus a themeless option. Wait for the choice. After authorization, call `attach_frame`, then `read_frame`, and carry that audiovisual language through typography, crops, pacing, motion, captions, graphics, sound-image relationships, and ratio adaptations. Do not merely recolor generic cards.
+Skill and Frame remain independent: content category never determines a Frame. For a complete creative build with no attached Frame, once you understand the footage and requested visual feeling, call `list_frames` and recommend one or two evidence-based candidates plus a themeless option. Wait for the choice. After authorization, call `attach_frame`, then `read_frame`. Treat its showcases as reference vocabulary rather than shot, layout or transition templates. The Director and persisted Scene designs choose source spans, media, pacing and composition from the evidence; express the Frame through transferable shape, material, image treatment, typography, color-role relationships, spatial tension, motion temperament and sparse sound texture. Manual palette, captions and layout remain authoritative. Do not merely recolor generic cards.
 
 The user may always remain themeless. Themeless still requires deliberate visual craft.
 

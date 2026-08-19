@@ -39,14 +39,20 @@ template. It must make clear:
    full-canvas treatment, motion/payoff/exit, sound plan and honest asset strategy.
 5. **Material sufficiency** — what is supported now and any exact missing source that changes quality.
 
-When a Frame is already selected, read and use it. When none is selected and the visual direction is
-materially uncertain, recommend one or two evidence-based Frames plus themeless and wait. The user's
-manual palette, layout, captions and explicit instructions remain authoritative.
+When a Frame is already selected, read it as professional art direction: its examples demonstrate
+transferable shape, material, image, type, color-role, spatial and motion principles, not Scene types,
+layouts or media choices. The Director and persisted Scene designs interpret those principles for the
+actual evidence and footage. When none is selected and the visual direction is materially uncertain,
+recommend one or two evidence-based Frames plus themeless and wait. The user's manual palette, layout,
+captions and explicit instructions remain authoritative.
 
 ## Save an executable Director Plan
 
 After approval, call `set_director_plan`. This is a saved design contract, not chapter labels. Define one
-whole-film `creativeThesis`, `rhythmArc` and `designSystem`. Every Scene must name:
+whole-film `creativeThesis`, `rhythmArc`, `deliverySafety` and `designSystem`. `deliverySafety` records the
+target platform/placement and ratio, reserved platform chrome/caption/crop/edge-copy zones, and the protected
+region for faces, products, evidence, terms and CTA. If the destination is unknown, say so and use a conservative
+central safe region rather than inventing exact platform chrome. Every Scene must name:
 
 - its exact edited-time interval, viewer task, narrative role and purpose;
 - one dominant `visualAnchor` and a source-aware full-canvas `visualTreatment`;
@@ -60,6 +66,23 @@ Split a Scene when its visual anchor or viewing task changes. Do not split by a 
 Scene may remain one interval only when its internal speech/action triggers are explicit.
 
 ## Execute Scenes, not insertions
+
+Before mutating the next logical batch, call `set_scene_designs`. This is the persistent design pass
+between the approved Director Plan and the atomic timeline tools. For every Scene, author:
+
+- one content-specific visual argument and payoff;
+- the complete canvas hierarchy, including how source footage, secondary media, type, captions and
+  Motion Graphics coexist when several are needed;
+- establishment, development, emphasis, readable hold and clear against real speech/action beats;
+- the visual/audio handoff from the previous Scene and into the next;
+- observable rendered success criteria.
+
+These are open prose decisions, not a layout or transition menu. Do not add layers to meet a count: a
+clean source-led Scene may be the strongest design. Do not let one isolated image, card or Motion Graphic
+become the whole Scene when the approved idea requires source continuity or layered evidence. Existing
+projects may already carry this artifact; call `read_scene_designs` with only the affected `sceneIds` before
+continuing them. Likewise, prefer `read_director_plan {sceneIds}` for local Scene work; omit the filter only for
+a genuine whole-film audit.
 
 Use the neutral timeline tools to cut, place, move, resize, frame, crop, layer and mix real media. Bind
 planned placements to their exact `sceneId`. Let source people, products, interfaces and evidence remain
@@ -80,9 +103,11 @@ independent fades, and allow deliberate quiet Scenes.
 ## Review the viewing experience
 
 Run `review_sequence` after a complete pass. It returns entrance, development, payoff and exit frames in
-time order, checks local scene structure and audible audio, and returns exact Scene repair scopes. Look at
-every attached image as one moving sequence, then review at normal playback speed and delivery size; a
-good midpoint thumbnail is not proof of a finished Scene.
+time order, checks local scene structure and audible audio, and judges the ordered states together for
+missing development, fragmented layers and abrupt Scene handoffs. Look at every attached image as one
+moving sequence, then review at normal playback speed and delivery size; a good midpoint thumbnail is not
+proof of a finished Scene. When temporal review changes the idea, revise the affected `set_scene_designs`
+entry first, then repair its timeline implementation.
 
 Repair blank or unloaded media, missing evidence, tiny/unreadable graphics, repeated card geometry,
 uncleared overlays, clipped animation, silent/muted voice, level mistakes and weak boundaries. Preserve

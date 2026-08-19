@@ -1,6 +1,6 @@
 # The studio UI, as the user sees it
 
-Vocabulary first: **组件 / Component** is Studio's broader extensible visual-element concept. **动态图形 / Motion Graphic** is the primary Component family currently exposed in the UI: kinetic words, one-number reveals, data stories, logo stings, overlays and real-source highlights. Do not treat the two terms as synonyms or assume every future Component is a Motion Graphic. Other user-facing terms: **分镜/场景** (video shots), **取景** (shot framing: full / punch-in / corner / split), **字幕** (global caption presets), **主题** (Frames: design-system content packs), **素材** (assets: images/videos/Components), **口播稿** (the spoken transcript). The editor stores Components as `block` records.
+Vocabulary first: **组件 / Component** is Studio's broader extensible visual-element concept. **动态图形 / Motion Graphic** is the primary Component family currently exposed in the UI: kinetic words, one-number reveals, data stories, logo stings, overlays and real-source highlights. Do not treat the two terms as synonyms or assume every future Component is a Motion Graphic. Other user-facing terms: **分镜/场景** (video shots), **取景** (shot framing: full / punch-in / corner / split), **字幕** (global caption presets), **主题** (Frames: professional art directions, not Scene/layout templates), **素材** (assets: images/videos/Components), **口播稿** (the spoken transcript). The editor stores Components as `block` records.
 
 ## Layout
 
