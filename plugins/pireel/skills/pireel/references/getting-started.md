@@ -1,17 +1,17 @@
 ---
 name: getting-started
-description: FIRST-RUN setup for Pireel Studio. Run this whenever the user asks to install, connect, set up, or start using Pireel, or when a `pireel` MCP tool fails because the server is not connected yet. Registers the Pireel MCP server, drives the OAuth login, imports the user's first video, opens the live editor, and prints a self-report. After setup, route work through `pireel-basics` and the task skills.
+description: FIRST-RUN setup for Pireel Studio Preview. Run this whenever the user asks to install, connect, set up, or start using Pireel Preview, or when a `pireel-preview` MCP tool fails because the server is not connected yet. Registers the Preview MCP server, drives the OAuth login, imports the user's first video, opens the live editor, and prints a self-report. After setup, route work through `pireel-basics` and the task skills.
 ---
 
 # Getting started with Pireel Studio
 
-Pireel Studio (https://pireel.com) is a multi-source AI video editor for producing one or more independently editable cuts. Through the `pireel` MCP server your tools edit the composition **live in a studio browser tab**: transcript-based cutting, montage, storyboarding, designed graphics, subtitles, themes and local media import.
+Pireel Studio Preview (https://preview.pireel.com) is a multi-source AI video editor for producing one or more independently editable cuts. Through the `pireel-preview` MCP server your tools edit the composition **live in a studio browser tab**: transcript-based cutting, montage, storyboarding, designed graphics, subtitles, themes and local media import.
 
 If you are reading this, the Pireel workflow is already available either from the Pireel Plugin or as a standalone Skill. This connects the MCP server when needed and gets the user to their first edit. Complete **ALL steps in order** — setup is incomplete until you print the self-report in the final step.
 
 **If you JUST installed the skill this turn: do NOT stop.** A freshly-installed skill only auto-activates in a *new* session, but this file is already on disk — read it and run the steps below **now, in the same turn**. Never end your turn at "the skill will be available next time" or tell the user to start a new conversation; keep going straight into Step 1.
 
-**Base URL** (`<BASE>` below): `https://pireel.com`, unless the user runs Pireel locally, in which case use their localhost origin (e.g. `http://localhost:3005`).
+**Base URL** (`<BASE>` below): `https://preview.pireel.com`, unless the user explicitly asks to run Pireel locally, in which case use their localhost origin (e.g. `http://localhost:3005`). Never substitute the production origin while this Preview plugin is active.
 
 **Host gate**: if Pireel MCP tools are already available through the installed Plugin, continue on any supported host. Web/mobile/remote hosts can work with cloud projects, stock media and server-side tools, but cannot read a path on the user's computer or edit its local agent config. A LOCAL desktop/CLI host is required only when registering MCP for a standalone Skill or importing local-file bytes through the helper.
 
@@ -23,10 +23,10 @@ MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
 
 - **Pireel Plugin:** the bundled `.mcp.json` registers the server. If Pireel tools are already available, do not edit agent config and continue to Step 2. If the Plugin is installed but its tools are absent, start a new chat/session once so the host can load the bundle; do not install a second standalone copy to compensate.
 
-- **Standalone Skill on Codex:** run `codex mcp login pireel`. If the server is not registered yet, add it to `~/.codex/config.toml` first — the `oauth_resource` line is REQUIRED (without it Codex expects a static bearer token instead of OAuth):
+- **Standalone Skill on Codex:** run `codex mcp login pireel-preview`. If the server is not registered yet, add it to `~/.codex/config.toml` first — the `oauth_resource` line is REQUIRED (without it Codex expects a static bearer token instead of OAuth):
 
   ```toml
-  [mcp_servers.pireel]
+  [mcp_servers.pireel-preview]
   url = "<BASE>/api/studio/mcp"
   oauth_resource = "<BASE>/api/studio/mcp"
   ```
@@ -34,7 +34,7 @@ MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
 - **Claude Code**:
 
   ```bash
-  claude mcp add --transport http pireel <BASE>/api/studio/mcp
+  claude mcp add --transport http pireel-preview <BASE>/api/studio/mcp
   ```
 
 - **Other MCP clients**: register a streamable-HTTP server at the endpoint above. OAuth discovery is standard (RFC 8414 / 9728 metadata at `<BASE>/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource`).
@@ -43,7 +43,7 @@ MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
 
 No API keys. The endpoint answers unauthenticated calls with a `WWW-Authenticate` challenge; the MCP client discovers the OAuth flow from it automatically.
 
-- **Codex**: `codex mcp login pireel` opens the browser sign-in; the user logs into their Pireel account and approves.
+- **Codex**: `codex mcp login pireel-preview` opens the browser sign-in; the user logs into their Pireel Preview account and approves.
 - **Claude Code**: the client prompts on first use (or via `/mcp`) — follow the browser flow.
 
 ## Step 3 — Verify the connection
@@ -83,7 +83,7 @@ Pireel setup complete:
 
 ## Next
 
-Setup done. Return to the `pireel` skill router and read the matching sibling reference next: `pireel-basics.md` (mental model + tool routing) first, then `captions.md` / `storyboard-draft.md` / `compose-blocks.md` / `export.md` / `talking-head-cleanup.md` / `product-help.md` / `known-errors.md` as the task calls for. Full setup contract and troubleshooting also lives at https://pireel.com/connect-agent.md.
+Setup done. Return to the `pireel` skill router and read the matching sibling reference next: `pireel-basics.md` (mental model + tool routing) first, then `captions.md` / `storyboard-draft.md` / `compose-blocks.md` / `export.md` / `talking-head-cleanup.md` / `product-help.md` / `known-errors.md` as the task calls for. Full setup contract and troubleshooting also lives at https://preview.pireel.com/connect-agent.md.
 
 ## Billing note
 

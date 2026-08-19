@@ -1,0 +1,45 @@
+name: preview plugin isolation guard
+
+on:
+  push:
+    branches: [preview]
+  pull_request:
+    branches: [preview]
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: verify preview endpoint isolation
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+
+          const plugin = JSON.parse(fs.readFileSync('plugins/pireel/.codex-plugin/plugin.json', 'utf8'));
+          const mcp = JSON.parse(fs.readFileSync('plugins/pireel/.mcp.json', 'utf8'));
+          const servers = Object.entries(mcp.mcpServers ?? {});
+
+          if (!plugin.version.includes('-preview.')) {
+            throw new Error(`Preview Plugin version must be prerelease SemVer, got ${plugin.version}`);
+          }
+          if (servers.length !== 1 || servers[0][0] !== 'pireel-preview') {
+            throw new Error('Preview Plugin must register exactly one MCP server named pireel-preview');
+          }
+          const config = servers[0][1];
+          for (const field of ['url', 'oauth_resource']) {
+            if (!String(config[field] ?? '').startsWith('https://preview.pireel.com/')) {
+              throw new Error(`Preview MCP ${field} must use preview.pireel.com`);
+            }
+          }
+
+          for (const path of [
+            'plugins/pireel/skills/pireel/scripts/import-media.mjs',
+            'plugins/pireel/skills/pireel/scripts/export-sink.mjs',
+          ]) {
+            const source = fs.readFileSync(path, 'utf8');
+            if (!source.includes("'https://preview.pireel.com'")) {
+              throw new Error(`${path} must default to the Preview origin`);
+            }
+          }
+          NODE

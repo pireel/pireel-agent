@@ -1,15 +1,15 @@
 # The studio UI, as the user sees it
 
-Vocabulary first: **组件 / Component** is Studio's broader extensible visual-element concept. **动态图形 / Motion Graphic** is the primary Component family currently exposed in the UI: kinetic words, one-number reveals, data stories, logo stings, overlays and real-source highlights. Do not treat the two terms as synonyms or assume every future Component is a Motion Graphic. Other user-facing terms: **分镜/场景** (video shots), **取景** (shot framing: full / punch-in / corner / split), **字幕** (global caption presets), **主题** (Frames: design-system content packs), **素材** (assets: images/videos/Components), **口播稿** (the spoken transcript). The editor stores Components as `block` records.
+Vocabulary first: **组件 / Component** is Studio's broader extensible visual-element concept. **动态图形 / Motion Graphic** is the primary Component family currently exposed in the UI: kinetic words, one-number reveals, data stories, logo stings, overlays and real-source highlights. Do not treat the two terms as synonyms or assume every future Component is a Motion Graphic. Other user-facing terms: **分镜/场景** (video shots), **取景** (shot framing: full / punch-in / corner / split), **字幕** (global caption presets), **主题** (Frames: professional art directions, not Scene/layout templates), **素材** (assets: images/videos/Components), **口播稿** (the spoken transcript). The editor stores Components as `block` records.
 
 ## Layout
 
-- **Projects home** (`/studio`): project cards — new / open / rename / delete. One project = one video.
+- **Projects home** (`/studio`): project cards — new / open / rename / delete. One project may contain multiple independently editable outputs.
 - **Workbench** (`/studio/<id>`), one screen, four zones:
   - **Preview canvas** (center) — this IS the editing surface: click an element to select it (drag/resize/rotate handles), double-click text to edit it in place. When the chat panel is closed, a 对话 button floats at the preview's top-left.
   - **Assets rail** (right of the preview, above the timeline) — two tabs: **素材** (all assets in one stream: images / videos / Components, with Motion Graphics as the current designed-visual family; uploads and generations mixed with source badges; search, grid/list, insert or drag onto the canvas/timeline; the **生成** button opens the generation window) and **主题** (Frame gallery: browse design packs, apply one to the whole piece). Collapsible; when collapsed a small 素材 button floats at the preview's top-right.
   - **Transport bar** (under the preview) — play/pause, time, undo/redo, split/trim-left/trim-right at the playhead, delete selection, **智能剪口播** (word-level transcript cutting), **字幕** (caption presets + bilingual translation), **人像** (person matte: text-behind-person, stroke, background swap), **取景** (framing picker for the selected shot), and export.
-  - **Timeline** (bottom) — track 0 is the talking-head video (scene cards with framing badges and the footage's own waveform under each thumbnail strip), upper tracks hold Components such as Motion Graphics and other overlays; captions do not occupy a track (edit them via 字幕/剪口播). Drag assets in, drag clips around, box-select.
+  - **Timeline** (bottom) — typed visual, Component/graphics, audio and caption tracks. The primary narrative is one semantic role rather than a special editing universe; ordinary media tracks can also carry video and its sound. Drag assets in, drag clips around, box-select, and apply split/trim/delete to the selected clip.
   - **Chat panel** (left side) — the built-in agent; closable via its header ✕ (the 对话 button at the preview's top-left brings it back).
 - **Tool panels (docked into the assets rail)** — 生成 (generate image/video/Motion Graphic Component, tabbed), 智能剪口播, 字幕 (presets + bilingual translation), 人像, 取景 (framing + 画面调色 sliders), 转场 (effect picker for one cut), 素材动效 (enter/exit animation for a media block). One at a time; opening another replaces it. A panel takes over the whole assets rail (the 素材/主题 tabs come back when it closes); if the rail is collapsed it auto-expands, and collapses back if it was only opened for the panel.
 
@@ -21,7 +21,7 @@ Vocabulary first: **组件 / Component** is Studio's broader extensible visual-e
 
 ## Common "where do I…" answers
 
-- Add a Motion Graphic → ask the agent (BYO compose), or 素材 tab → 动态图形 → insert; empty Motion Graphic placeholders offer AI-generate / upload actions.
+- Add a Motion Graphic → ask the agent (BYO compose) or 素材 tab → 动态图形 → insert. For complete edits it should be designed as one layer of the current Scene, with real placement/backdrop decided before generation.
 - Change how the video is framed in a scene → select the scene card → 取景 button (or the framing badge on the card).
 - Color-grade a scene (brightness/contrast/saturation) → same 取景 window, 画面调色 sliders (100 = untouched; per scene, or ask the agent: set_video_filter).
 - Shot sound (volume/mute of a scene's own audio, e.g. quiet a B-roll insert) → same 取景 window, 声音 section (volume 0–100% of source level + mute toggle; per scene, or ask the agent: set_shot_audio with volumeDb -60..0 / mute).

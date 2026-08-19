@@ -1,13 +1,13 @@
 # Pireel agent plugin
 
-Connect **Codex**, **Claude Code**, or another compatible AI agent to
-[Pireel Studio](https://pireel.com).
+Connect **Codex**, **Claude Code**, or another compatible AI agent to the
+isolated [Pireel Studio Preview](https://preview.pireel.com) environment.
 
 Use the agent to understand your footage, clean up a talking-head video, turn a
 long recording into shorter clips, add captions and visual elements, or prepare
 different versions for different platforms.
 
-[Read the setup guide](https://pireel.com/connect-agent.md)
+[Read the setup guide](https://preview.pireel.com/connect-agent.md)
 
 ## Install as a Plugin
 
@@ -30,9 +30,10 @@ codex plugin marketplace add pireel/pireel-agent --ref preview
 codex plugin add pireel@pireel-preview
 ```
 
-The preview and production plugins both register the `pireel` MCP server, so keep
-only one installed at a time. Start a new chat after installing or switching
-channels so the host loads the selected Plugin and MCP configuration.
+The Preview plugin registers the independent `pireel-preview` MCP server, so it
+can coexist with a production `pireel` connection without silently routing work
+to the wrong environment. Start a new chat after installing or updating so the
+host loads the new Plugin and MCP configuration.
 
 Then tell your agent:
 
@@ -56,7 +57,7 @@ through the host's own MCP configuration.
 You can also connect Claude Code directly:
 
 ```bash
-claude mcp add --transport http pireel https://pireel.com/api/studio/mcp
+claude mcp add --transport http pireel-preview https://preview.pireel.com/api/studio/mcp
 ```
 
 For the full guided editing workflow, install the standalone Pireel Skill with

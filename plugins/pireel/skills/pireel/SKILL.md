@@ -1,11 +1,11 @@
 ---
 name: pireel
-description: Edit videos in Pireel Studio through the `pireel` MCP server — first-run setup, local and stock media import, transcript editing, multi-source montage, multiple editable outputs, storyboarding, designed graphics, captions, themes and export. Read this whenever the user wants to install/connect Pireel or edit, cut, remix, storyboard, illustrate, caption, theme or export a Pireel video, and before the first Pireel MCP call or after a tool failure. Routes to the matching bundled playbook.
+description: Edit videos in Pireel Studio Preview through the `pireel-preview` MCP server — first-run setup, local and stock media import, transcript editing, multi-source montage, multiple editable outputs, storyboarding, designed graphics, captions, themes and export. Read this whenever the user wants to install/connect Pireel Preview or edit, cut, remix, storyboard, illustrate, caption, theme or export a Pireel video, and before the first Pireel Preview MCP call or after a tool failure. Routes to the matching bundled playbook.
 ---
 
 # Pireel Studio
 
-Pireel Studio (https://pireel.com) is a multi-source video editor that can produce multiple independently editable cuts from one project. Your tools edit the composition **live in the user's open studio browser tab** via the `pireel` MCP server; when no tab is open, data-level tools fall back to **OFFLINE MODE** against the user's latest cloud project.
+Pireel Studio Preview (https://preview.pireel.com) is a multi-source video editor that can produce multiple independently editable cuts from one project. Your tools edit the composition **live in the user's open studio browser tab** via the `pireel-preview` MCP server; when no tab is open, data-level tools fall back to **OFFLINE MODE** against the user's latest Preview project.
 
 This one skill covers the whole product. Skim the essentials below, then **open the matching file in `references/` for the task at hand** — don't work from memory on the specialized flows.
 
@@ -15,7 +15,7 @@ This one skill covers the whole product. Skim the essentials below, then **open 
 - **`get_state` first — and again after any failed mutation.** Ids for blocks/shots/frames/presets come from `get_state`, tool receipts, `list_frames`, or the caption catalog. Never invent an id.
 - **Two clocks.** "edited" = final-timeline seconds (cut/split/trim/add_block address by it). "src" = a segment's own source-file seconds (the narration transcript uses the MAIN source clock). Don't mix them.
 - **BYO generation is free.** Text/HTML you write yourself (block composition, plan, visual labels) runs on the user's own agent subscription, NOT Pireel credits. Only tools whose description carries a `[…CHARGES…]` marker bill credits (image/video generation + Pireel-LLM fallbacks). Prefer the BYO path.
-- **Surface the editor early on real work.** Call `create_browser_handoff` and open the returned `url` with YOUR OWN built-in/embedded browser tool — never the OS `open`/`start`/`xdg-open`, the user's default browser, or an already-connected external Chrome (single-use ticket, ~60s). Then keep that tab **visible and open past your turn** so it isn't auto-cleaned — use your browser tool's own visibility and keep-tab/persist controls (details in `references/pireel-basics.md`). No embedded browser? Hand the user the plain `https://pireel.com/zh/studio/<id>` link instead. Never print the handoff url.
+- **Surface the editor early on real work.** Call `create_browser_handoff` and open the returned `url` with YOUR OWN built-in/embedded browser tool — never the OS `open`/`start`/`xdg-open`, the user's default browser, or an already-connected external Chrome (single-use ticket, ~60s). Then keep that tab **visible and open past your turn** so it isn't auto-cleaned — use your browser tool's own visibility and keep-tab/persist controls (details in `references/pireel-basics.md`). No embedded browser? Hand the user the plain `https://preview.pireel.com/zh/studio/<id>` link instead. Never print the handoff url.
 
 ## Routing — read the reference for the task
 
@@ -27,7 +27,7 @@ This one skill covers the whole product. Skim the essentials below, then **open 
 | Mix several clips, make product ads, or create multiple editable outputs / variants | `references/montage-variants.md` |
 | Clean up a raw talking-head A-roll (retakes, filler, dead air) | `references/talking-head-cleanup.md` |
 | Add a designed graphic block (BYO HTML) | `references/compose-blocks.md` |
-| Draft a full storyboard in one shot | `references/storyboard-draft.md` |
+| Design or execute a complete first cut / finished video | `references/storyboard-draft.md` |
 | Add / restyle captions | `references/captions.md` |
 | Export an MP4 | `references/export.md` |
 | Answer pricing / credits / plan / UI questions | `references/product-help.md` |

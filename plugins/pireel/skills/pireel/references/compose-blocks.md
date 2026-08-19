@@ -1,66 +1,74 @@
 ---
 name: compose-blocks
-description: The BYO-brain workflow for creating and rewriting Components in Pireel Studio — especially the Motion Graphic family — using compose_block_brief, apply_block, lint-fix loops, get_icons, and Frame playbooks. Use whenever the user wants kinetic words, a number reveal, data story, logo sting, overlay, real-source highlight or other designed on-screen motion, wants an existing Component changed, or when placeholders (待配图) need filling.
+description: Create or rewrite one Pireel Component inside an already understood Scene using compose_block_brief, apply_block, planned placement/backdrop, lint repair and rendered verification.
 ---
 
-# Composing Components and Motion Graphics (BYO generation)
+# Components and Motion Graphics
 
-In Pireel Studio, **you are the model** for Component HTML. **Component** is the broader, extensible visual-element concept. **Motion Graphic** is the primary Component family available today: kinetic words, one number, data, a logo sting, an overlay, a real-source highlight or a bespoke visual relation. The editor stores a Component as a `block`; use “Motion Graphic” for this family, but do not collapse every present or future Component into that subtype. The flow is always:
+`Component` is Pireel's broad editable visual-layer concept. Motion Graphics—kinetic type, numbers,
+comparisons, charts, processes, diagrams, source annotations, authentic interface treatments and
+content-specific forms—are one important Component family.
 
-```
-compose_block_brief  →  generate the block yourself  →  apply_block
-```
+A Component is not a whole Scene and never substitutes for directing the source picture. First decide
+what the Scene needs; only then decide whether a generated layer earns its place.
 
-This burns YOUR agent subscription, not the user's Pireel credits. The tools that run Pireel's own LLM instead (`add_block`, `edit_block`, `add_graphics`) **charge the account's credits** — use them only if the BYO flow fails repeatedly.
+## New Component: compose before pixels
 
-## Step 1 — get the contract: `compose_block_brief`
+Before generation, decide:
 
-Returns the FULL generation contract `{system, prompt}`, assembled live from the composition: theme tokens, frame design language, box size, on-screen beats, neighbor roster. Three targeting modes:
+- `atSec` and `durationSec`: the complete thought/action window;
+- `sceneId`: the approved Director Scene when a plan exists;
+- `placement`: intended `{xPct,yPct,widthPct,heightPct}` canvas region;
+- `backdrop`: what real picture sits under that region and which face, product, caption, UI or evidence
+  zones must remain unobscured;
+- `instruction`: the layer's communicative job and content—not merely “add a nice card”.
 
-1. **Fill a placeholder**: pass `blockId` of a `待配图` placeholder (ids from `get_state`). Its design spec becomes the instruction — **omit `instruction`**.
-2. **Rewrite an existing block**: pass its `blockId` **plus** an `instruction` describing the change. Call `get_block` first when the rewrite must preserve specifics of what's already inside.
-3. **New element**: pass `instruction` only (no `blockId`), optionally `atSec` for the timeline start (defaults to the playhead).
+Then call `compose_block_brief` with those values. It returns the full `{system,prompt}` contract plus a
+`target`. The prompt already contains the actual box, whole-film design system, current Scene treatment,
+Frame/themeless visual language and local spoken beats. Generate the answer yourself from that contract.
 
-`instruction` is what to build/change — concrete and self-contained; Chinese preferred. If you call it with neither a placeholder `blockId` nor an `instruction`, it errors (`instruction required`).
+New/custom Motion Graphics use the markup contract: one short note, one fenced `html` block and one fenced
+`js` timeline body. Existing registered Components keep their typed JSON props contract. Use
+`format:"kit"` only when intentionally choosing a registered Component; use `format:"html"` for bespoke
+visual explanation. The retrieved Component/pattern candidates are useful landmarks, not a closed menu.
 
-## Step 2 — generate, following the contract exactly
+Submit with `apply_block`, copying the returned target block id, timing and placement unchanged and adding
+the complete raw model response. The insertion preserves the duration it was authored for, so later edge
+drags time-stretch its entrance, payoff/hold and exit instead of cutting choreography off.
 
-Adopt the returned `system` and `prompt` verbatim. **The contract's shape follows the project** — read the brief's OUTPUT section, don't assume:
+## Existing Component
 
-- **Themed project** (a frame is attached) → free-form markup:
-  1. **One short note** (a sentence about what you built),
-  2. a **```html fence** with the block's markup and scoped styles,
-  3. a **```js fence** with the deterministic animation timeline.
-- **Themeless project** (no Frame) → a registered Motion Graphic Component choice: **one ```json fence** and nothing else, either `{"component": "<id from the brief's catalogue>", "props": {...}}`, or `{"custom": true}` when no listed Motion Graphic Component carries the content (then call `compose_block_brief` again with `format: "html"` to get the free-form contract and build it by hand), or `null` when the moment genuinely deserves no Motion Graphic. The JSON key `component` names the actual upper-level Component concept.
+Call `get_block` when the requested edit must preserve or inspect existing content. Then call
+`compose_block_brief {blockId,instruction}`. Existing timing, box, design context and current props/markup
+are supplied automatically. Apply using the same `blockId` and returned target.
 
-Follow every rule in the contract — sizing, tokens, allowed CSS, animation constraints. Two contract-level facts worth pinning:
+Do not regenerate for a pure timeline move or resize: use the relevant timeline/placement tool. A later
+Frame switch does not rewrite already generated Components; only an explicit edit does.
 
-- The contract references a `get_icons` tool: **it exists on this MCP server**. Call `get_icons {names}` for inline SVG icons (up to 8 lucide-style kebab-case names, e.g. `["trending-up","shield-check"]`; `kind: "brand"` for brand logos). Never hand-draw semantic icons, never put emoji on canvas.
-- If a **frame** (theme content pack) is attached, its design language is already baked into the brief — but when YOU are planning what blocks to make, read the playbook first: `read_frame {frame_id}` (ids via `list_frames`; attach with `attach_frame`). Call `read_frame` once after attaching and carry its character, palette semantics, layout language and taboos into every instruction you write; the brief's own sizing rules govern actual dimensions.
+## Design standard
 
-## Step 3 — submit: `apply_block`
+- Treat the actual canvas region like a responsive page surface: establish hierarchy, whitespace,
+  alignment, scale and one focal path for its real aspect ratio.
+- Inherit the whole-film typography, materials, imagery and motion grammar. Vary the form because the
+  content and neighboring Scene differ, not by inventing a new style.
+- Reveal in response to speech/action/evidence. Give the layer an entrance, development, payoff, readable
+  hold and clean exit; later spoken content must remain hidden until its local beat.
+- Use real screenshots/pages/posts/maps/code or product evidence truthfully. Do not redraw authentic
+  interfaces as fake generic UI when the real source is available.
+- Use `get_icons` for semantic/brand SVGs. Do not hand-draw familiar icons or use emoji as substitute art.
+- Keep phone-size legibility and protected subjects ahead of decorative detail.
 
-Pass the **same `blockId` / `atSec` you gave the brief**, and `raw` = your full generated text exactly as the contract shaped it (note + ```html + ```js on the themed path; the single ```json fence on the themeless path — the fences are parsed out). Behavior by target:
+## Lint and visual repair
 
-- Placeholder `blockId` → fills it.
-- Existing `blockId` → overwrites its content.
-- Neither → inserts a NEW element; optional `durationSec` (seconds on screen, default 3) and `label` (short timeline label).
+`apply_block` validates scoped CSS, deterministic animation and the output contract. On rejection, repair
+only the listed issues and re-apply with the same stable `blockId`; do not restart the design or alter
+unrelated content.
 
-## The lint loop
+After it lands, call `capture_frame` at a meaningful moment for a local change, or `review_sequence` for a
+complete Scene/film pass. Inspect its entrance, development, payoff and exit images in order. Check the
+composed picture—not the Component in isolation:
+source dominance, placement, overlap, scale, contrast, readable hold, exit and continuity. Fix the Scene,
+not merely the prettiest thumbnail.
 
-`apply_block` validates the block (scoped CSS, no scripts, deterministic animation). On failure it returns the lint issues. **Fix ONLY those issues and re-apply** — do not regenerate from scratch, do not "improve" unrelated parts, do not change the note. Repeated identical failures after 2–3 fix attempts are the one case where falling back to the credits-charging `add_block`/`edit_block` is acceptable.
-
-## After it lands
-
-- The receipt confirms placement and the block id; call `focus_element` on it so the user sees the result.
-- **Verify with your eyes**: call `capture_frame {atSec}` at the block's moment and LOOK at the rendered frame — placement, overlap with the speaker, contrast, sizing. If something looks wrong, fix it with another brief → generate → apply round before reporting done. (`capture_frame` needs the studio tab open.)
-- Timing/position tweaks are NOT re-generation: `move_block` / `resize_block` for timeline changes, `delete_block` to remove, `duplicate_block` to copy (then a brief+apply rewrite to vary the copy).
-- Batch work (e.g. filling every placeholder after `lay_out`): loop brief → generate → apply per placeholder, one at a time — each brief is assembled from live state, so apply each block before requesting the next brief.
-
-## Quick reference
-
-| Goal | Brief call | Apply call |
-| --- | --- | --- |
-| Fill placeholder `b12` | `compose_block_brief {blockId:"b12"}` | `apply_block {blockId:"b12", raw}` |
-| Rewrite block `b7` | `compose_block_brief {blockId:"b7", instruction:"..."}` | `apply_block {blockId:"b7", raw}` |
-| New card at 14s | `compose_block_brief {instruction:"...", atSec:14}` | `apply_block {atSec:14, durationSec:4, label:"...", raw}` |
+Hosted `add_block` / `edit_block` are credit-charging fallbacks. The BYO brief/apply path uses the caller's
+own agent model and should be the default for MCP agents.
