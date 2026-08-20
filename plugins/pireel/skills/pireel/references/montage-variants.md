@@ -15,7 +15,7 @@ Inspect `get_state`, `list_outputs`, `list_assets`, and the available footage be
 - output count, duration, ratio, platform, language, and purpose;
 - what should vary: hook, audience, proof order, use case, duration, placement, or another meaningful hypothesis;
 - product identity, supported claims, offer, CTA, mandatory copy, and prohibited claims;
-- narration source, music/source-sound direction, rights, and brand constraints.
+- narration source, whether a newly written voiceover would strengthen the ad, music/source-sound direction, rights, and brand constraints.
 
 If the user says only “一组”, “多条”, “several”, “a batch”, or “variants”, do not silently make one output. After the safe asset audit, offer two or three concrete family shapes with tradeoffs and wait for the user. Examples: three hook hypotheses; two structurally different ads plus short cutdowns; or one representative pilot before expansion.
 
@@ -29,7 +29,9 @@ Voiceover is optional, but a content or visual narrative spine is required. Afte
 - **screen-copy-led:** concise hook, value, proof, and CTA copy carry the message with music and/or useful source sound;
 - **visual-led:** selected actions, composition, source sound, and brand feeling carry the edit with minimal copy; use it for product-world or brand work, not as a guaranteed conversion format.
 
-Use an explicit mode from the request when available. Otherwise offer these choices and wait. Do not require a voiceover just because the clips are silent, and do not silently generate speech or music from a general request for a finished montage. For voice-led work, receive or draft the script and confirm claims, pronunciation, and CTA before any charge-bearing speech generation. For multiple outputs, define which script, copy, caption, source-sound, and music layers are shared versus intentionally varied.
+Use an explicit mode from the request when available. Otherwise infer and recommend the strongest mode from the inspected footage and product truth. Generated voiceover is a common ad-production route when useful product action exists but the material lacks a coherent spoken argument; proactively consider it for the hook, mechanism, proof, or CTA instead of waiting for the user to name the tool. Do not require voiceover just because the clips are silent, and do not silently generate speech or music from a general request for a finished montage.
+
+When generated voiceover is the recommendation, write a concise footage-aware draft from approved facts and include the exact script, language, delivery direction, and voice requirement in the pilot proposal. Approve may authorize that exact script and charge-bearing generation; do not add another abstract mode question unless a materially different argument remains unresolved. For multiple outputs, define which script, copy, caption, source-sound, and music layers are shared versus intentionally varied.
 
 ## Offer a visual system before the pilot
 
@@ -60,6 +62,8 @@ Use transitions sparingly. Hard cuts, action matches, scale changes, source soun
 Use `create_output` for genuinely independent concepts and `duplicate_output` for controlled variations of an approved master. Use `switch_output` and `rename_output` so the user can understand the family. Re-read `get_state` after every switch because timeline ids are output-local.
 
 Create a representative pilot before multiplying uncertain claims, audio, generation, Frame treatment, or layout. Derive its creative thesis, rhythm arc, whole-film video design system and Scene progression from the actual actions and evidence in the footage. Present that proposal and wait for approve/reject before publishable-looking construction. After approval, persist it with `set_director_plan`; every Scene must name its visual anchor, full-canvas treatment, motion/payoff/exit, sound hierarchy, asset strategy and explicit B-roll decision. Once the pilot is coherent and reviewed, expand the family in small logical batches. Each output must have a distinct hypothesis, such as mechanism-first versus creator-first, rather than a different color or random shot order.
+
+If the approved pilot includes generated voiceover, call `generate_speech` with the exact approved script, pass its returned asset fields unchanged to `register_media`, then place it with `add_clips` using `role=narration`. Use `list_voices` first only when a specific voice identity matters. Treat the known script as semantic truth; use targeted `extract_asr` only when performed word timing, pauses, captions, animation, or beat-aware Scene boundaries require measurement.
 
 When a Scene earns a Motion Graphic, decide its real region and what picture it overlays before generation. Pass `sceneId`, timing, `placement` and `backdrop` into `compose_block_brief`, then copy its target unchanged to `apply_block`. Do not generate standalone cards and scatter them over an already assembled montage.
 
