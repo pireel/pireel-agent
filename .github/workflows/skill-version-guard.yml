@@ -1,13 +1,11 @@
 name: skill version guard
 
-# The MCP server announces a workflow baseline and both distribution channels
-# bundle the same VERSION next to SKILL.md. Plugin SemVer remains independent;
-# each channel uses its own updater. This guard makes workflow-content releases
-# observable without coupling them to the Plugin package version.
+# Each release channel owns one workflow baseline in release/channels.json. The release script
+# synchronizes it into the bundled Skill VERSION; this guard rejects drift and unversioned edits.
 
 on:
   push:
-    branches: [main]
+    branches: [main, preview]
   pull_request:
 
 jobs:
@@ -17,7 +15,24 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: resolve and validate release channel
+        id: channel
+        env:
+          RELEASE_BRANCH: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
+        run: |
+          case "$RELEASE_BRANCH" in
+            main) CHANNEL="production" ;;
+            preview) CHANNEL="preview" ;;
+            *) echo "skip=1" >> "$GITHUB_OUTPUT"; exit 0 ;;
+          esac
+          echo "name=$CHANNEL" >> "$GITHUB_OUTPUT"
+          echo "plugin_root=$(node -e 'const c=require("./release/channels.json"); process.stdout.write(c[process.argv[1]].pluginRoot)' "$CHANNEL")" >> "$GITHUB_OUTPUT"
+          PIREEL_RELEASE_BRANCH="$RELEASE_BRANCH" node scripts/release-channel.mjs "$CHANNEL" --check
       - name: skill changes must bump the version
+        if: steps.channel.outputs.skip != '1'
+        env:
+          CHANNEL: ${{ steps.channel.outputs.name }}
+          PLUGIN_ROOT: ${{ steps.channel.outputs.plugin_root }}
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE="${{ github.event.pull_request.base.sha }}"
@@ -29,7 +44,7 @@ jobs:
             echo "No comparable base commit; skipping."
             exit 0
           fi
-          SKILL_DIR="plugins/pireel/skills"
+          SKILL_DIR="$PLUGIN_ROOT/skills"
           VERSION_FILE="$SKILL_DIR/pireel/VERSION"
           # The tag is opaque (clients update on mismatch, not ordering) — the only shape
           # requirement is one clean token; the real invariant is that it CHANGES per release.
@@ -41,10 +56,11 @@ jobs:
             echo "Skill tree unchanged; ok."
             exit 0
           fi
-          if ! git diff --quiet "$BASE" HEAD -- "$VERSION_FILE"; then
-            echo "Skill tree changed and VERSION changed; ok."
+          if ! git diff --quiet "$BASE" HEAD -- "$VERSION_FILE" && \
+             ! git diff --quiet "$BASE" HEAD -- release/channels.json; then
+            echo "Skill tree changed and $CHANNEL release baseline changed; ok."
             exit 0
           fi
-          echo "::error::$SKILL_DIR/ changed but $VERSION_FILE did not."
-          echo "Give it a new distinct value — the server baseline derives from the same file."
+          echo "::error::$SKILL_DIR/ changed without a synchronized $CHANNEL workflow release."
+          echo "Run scripts/release-channel.mjs for this channel with a new workflow version."
           exit 1

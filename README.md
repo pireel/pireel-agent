@@ -88,6 +88,35 @@ npx skills update pireel
 
 Re-running `npx skills add pireel/pireel-agent` also updates a standalone installation.
 
+When a standalone user moves to a host that supports Plugins, install and verify the matching
+Pireel Plugin first. Only then retire the standalone Skill and manual MCP registration; never
+remove the working connection before the Plugin endpoint succeeds.
+
+## Release channels
+
+Plugin SemVer and the MCP/Skill workflow baseline are separate. Their only editable source is
+`release/channels.json`; do not hand-edit `plugin.json` or the Skill `VERSION` during a release.
+
+Preview release:
+
+```bash
+node scripts/release-channel.mjs preview \
+  --plugin-version 0.8.0-preview.1 \
+  --workflow-version 2026-08-21.2
+```
+
+Stable promotion (run after the shared workflow has landed on `main`):
+
+```bash
+node scripts/release-channel.mjs production \
+  --plugin-version 0.8.0 \
+  --workflow-version 2026-08-21.2
+```
+
+The script refuses the wrong branch and Preview/stable SemVer mixups, then synchronizes the
+channel manifest, Plugin manifest, and bundled Skill baseline. CI runs the matching `--check`
+command and separately verifies endpoint isolation.
+
 ## Usage and credits
 
 The agent uses your existing AI agent subscription for the editing conversation.

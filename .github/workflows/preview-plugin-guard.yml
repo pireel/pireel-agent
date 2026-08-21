@@ -11,6 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: verify release channel manifest
+        env:
+          PIREEL_RELEASE_BRANCH: preview
+        run: node scripts/release-channel.mjs preview --check
       - name: verify preview endpoint isolation
         run: |
           node - <<'NODE'

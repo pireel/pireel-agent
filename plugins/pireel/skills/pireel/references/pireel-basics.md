@@ -5,14 +5,14 @@ description: Core mental model and tool routing for editing videos in Pireel Stu
 
 # Pireel Studio basics
 
-Pireel Studio Preview (https://preview.pireel.com) is a multi-source, multi-track video editor for speech-led edits, lessons, product stories, ads and montages. Through the `pireel-preview` MCP server your tools edit the composition **live in an open studio browser tab**: the timeline updates on screen as you work. Call `create_browser_handoff` and open the returned `url` in a browser surface you can control. Never spend the single-use ticket through OS `open` or an uncontrolled default browser. For local helper imports, choose a controllable browser that shares the agent host's loopback; on Codex this normally means connected Chrome when available, because the in-app browser may isolate `127.0.0.1`. For cloud-only work, prefer the embedded browser. The handoff expires in ~60s; open it immediately and never print it to the user.
+Pireel Studio Preview (https://preview.pireel.com) is a multi-source, multi-track video editor for speech-led edits, lessons, product stories, ads and montages. Through the `pireel-preview` MCP server your tools edit the composition **live in an open studio browser tab**: the timeline updates on screen as you work. Call `create_browser_handoff` and open the returned `url` with your own built-in/embedded browser tool. On Codex, use the in-app Browser runtime first; never spend the single-use ticket through OS `open`, the user's default browser, or connected Chrome proactively. Keep the tab visible and open. Only an explicit `local loopback is unreachable from this browser` result permits one retry in a controllable connected browser that shares the agent host's loopback. The handoff expires in ~60s; open it immediately and never print it to the user.
 
 **Keep the editor in YOUR browser, visible, and open — get this right the first time.** Three failure modes that make you look broken to the user:
-1. **Wrong surface.** Opening the handoff URL means opening it in a browser YOU can control. Cloud-only work can use the embedded browser. Local helper import requires a browser sharing host loopback; use connected Chrome on Codex when available. Never route it to an uncontrolled default browser.
+1. **Wrong surface.** Opening the handoff URL means opening it in your own built-in/embedded browser. On Codex, use the in-app Browser runtime first. Never route it to connected Chrome or an uncontrolled default browser unless the in-app helper attempt has already returned the explicit loopback error.
 2. **Not visible.** After opening, make your browser **visible** so the user watches every edit land — use your browser tool's visibility control.
 3. **Auto-closed at turn end.** Many embedded browsers clean up tabs when your turn finishes — that yanks the editor out from under the user right after you opened it. **Mark the Pireel tab to persist** using your tool's keep-tab / finalize-with-keep control. Never close-and-reopen the Pireel tab between edits; open it once, keep it.
 
-These are your host's own browser-runtime controls, not Pireel MCP tools — use whatever your tool exposes. **On Codex specifically:** use the official Browser runtime for either the in-app browser or connected Chrome; never use OS `open`. For local helper import, select connected Chrome when available and control it through the same Browser runtime. For cloud-only editing, the in-app browser is preferred. Navigate with the selected tab's `goto`, then follow that browser's documented keep/finalize behavior.
+These are your host's own browser-runtime controls, not Pireel MCP tools — use whatever your tool exposes. **On Codex specifically:** drive the in-app browser through the official Browser runtime / Node REPL, navigate with the selected tab's `goto`, make it visible, and follow the runtime's documented keep/finalize behavior. Never use OS `open` or select connected Chrome preemptively. A controllable connected browser is only the one-retry fallback after the exact loopback-unreachable error.
 
 The MCP endpoint is `https://preview.pireel.com/api/studio/mcp`. Auth is OAuth — the agent's `mcp login` / first-use flow opens the browser; there are no API keys. On HTTP 401, re-run the OAuth login for `pireel-preview`.
 
@@ -79,7 +79,7 @@ Hosted generation tools whose descriptions carry a charge marker use Pireel cred
 | Subtitles on/off/restyle | `set_captions` (18 presets), `remove_captions` — see the `captions` skill |
 | Themes | `list_frames` → `attach_frame` → `read_frame {frame_id}` |
 | Complete first cut / finished video | whole-film design and approval method in `storyboard-draft.md` |
-| Open the live editor (your browser, pre-signed-in) | `create_browser_handoff` → cloud-only: embedded browser; local helper: a controlled browser sharing host loopback |
+| Open the live editor (your browser, pre-signed-in) | `create_browser_handoff` → built-in/embedded browser first; connected browser only after the explicit loopback-unreachable error |
 | User rejects a change | `undo` (one step per call; doesn't cover the user's manual drags) |
 
 ## Patience with slow tools
@@ -102,7 +102,7 @@ When the user points at LOCAL video, image or audio paths, load the `asset-impor
 - Aggressive shortening, restructuring, highlight/short-version, or a generated hook — confirm target length, structure, and what to preserve BEFORE cutting.
 - Before a consequential complete design with no Frame, inspect the material and recommend 1–2 fitting Frames plus themeless when visual direction is genuinely unresolved; wait for the choice. Never block a small local edit on this. Motion Graphics remain a separate editing layer inside the resulting Scenes.
 - PROJECTS (no browser): offline tools act on your ACTIVE project = the most-recently-touched one. `list_projects` shows all (newest first = active); `switch_project {project_id}` makes a different one active and returns its state; `create_project` starts a fresh empty one (immediately active); `rename_project` retitles. If get_state reports "no cloud project", call `create_project` (or `import_media`) — don't send the user to a browser just to create one.
-- `studio_not_open` / `studio_tab_closed` — first open a controllable tab yourself; use a host-loopback browser for local import and the embedded browser for cloud-only work. Ask the user only when no compatible controllable browser exists.
+- `studio_not_open` / `studio_tab_closed` — first open your own built-in/embedded browser tab. Ask the user only when no embedded browser exists. For local import, switch to a controllable connected browser only after the embedded attempt explicitly reports the loopback-unreachable error.
 
 ## Talking to the user
 

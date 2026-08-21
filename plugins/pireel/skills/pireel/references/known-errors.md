@@ -38,7 +38,7 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 
 **Meaning**: MCP authentication and the Studio bridge are connected, but the browser hosting Studio cannot reach the agent host's throwaway `127.0.0.1` file server. Some embedded/in-app browser sandboxes isolate loopback; this is different from an API, R2, or ASR failure.
 
-**Recovery**: keep the same project and open one fresh `create_browser_handoff` in a controllable browser that shares the host network (on Codex, prefer connected Chrome when available). Close/release the isolated Studio tab, get one fresh import token, and retry the helper once. Do not upload the original to cloud storage, drive hidden file inputs, or invent another transfer path.
+**Recovery**: only after this exact error, keep the same project and open one fresh `create_browser_handoff` in a controllable connected browser that shares the host network. Close/release the isolated in-app Studio tab, get one fresh import token, and retry the helper once. Do not choose the connected browser before the built-in/embedded browser attempt fails. Do not upload the original to cloud storage, drive hidden file inputs, or invent another transfer path.
 
 ## HTTP 401
 

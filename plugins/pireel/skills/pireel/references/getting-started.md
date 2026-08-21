@@ -17,13 +17,15 @@ If you are reading this, the Pireel workflow is already available either from th
 
 **Sandbox rule**: on a host with shell access, the shell sandbox may block ALL network (even localhost). Run required network commands out of sandbox (request approval instead of attempting a sandboxed run first). NEVER conclude the Pireel server is down from a sandboxed `curl` — Plugin/MCP connections do not go through that shell sandbox.
 
-## Step 1 — Use or register the Pireel MCP server
+## Step 1 — Prefer the Plugin, then use or register the MCP server
 
 MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
 
-- **Pireel Plugin:** the bundled `.mcp.json` registers the server. If Pireel tools are already available, do not edit agent config and continue to Step 2. If the Plugin is installed but its tools are absent, start a new chat/session once so the host can load the bundle; do not install a second standalone copy to compensate.
+- **Pireel Plugin:** the bundled `.mcp.json` registers the server. If Pireel tools are already available from that Plugin, do not edit agent config and continue to Step 2. If the Plugin is installed but its tools are absent, start a new chat/session once so the host can load the bundle; do not install a second standalone copy to compensate.
 
-- **Standalone Skill on Codex:** run `codex mcp login pireel-preview`. If the server is not registered yet, add it to `~/.codex/config.toml` first — the `oauth_resource` line is REQUIRED (without it Codex expects a static bearer token instead of OAuth):
+- **Standalone Skill on a Plugin-capable host:** do not treat the existing standalone MCP as the preferred route. Install the matching Pireel Plugin through the host's native Plugin manager, reload when required, authenticate, and verify `get_state` against this exact `<BASE>` endpoint. Only after that succeeds may you retire the standalone Skill/manual MCP entry through the host's supported removal flow. Never remove the working standalone connection before verification. If Plugin installation or verification fails, preserve it and continue below.
+
+- **Standalone Skill on Codex when Plugin installation is unavailable:** run `codex mcp login pireel-preview`. If the server is not registered yet, add it to `~/.codex/config.toml` first — the `oauth_resource` line is REQUIRED (without it Codex expects a static bearer token instead of OAuth):
 
   ```toml
   [mcp_servers.pireel-preview]
@@ -59,7 +61,7 @@ Call `get_state` and interpret:
 
 Ask the user how to start, then do it:
 
-**Open the live editor FIRST** (both paths need a tab; the local-video path streams the bytes straight into it): call `create_browser_handoff` and open the returned `url` in a browser surface you can control. Never use OS `open`/`start`/`xdg-open` or an uncontrolled default browser: the ticket is single-use (~60 s). For LOCAL helper imports the browser must share the agent host's `127.0.0.1`; on Codex, prefer connected Chrome when available because the in-app browser may isolate loopback. For cloud-only setup, prefer the embedded browser. Keep the selected tab open using that browser runtime's keep/finalize controls. To hand the user a link, give the plain `<BASE>/zh/studio/<projectId>` instead — never the handoff URL.
+**Open the live editor FIRST** (both paths need a tab; the local-video path streams the bytes straight into it): call `create_browser_handoff` and open the returned `url` with **your own built-in/embedded browser tool**. On Codex, drive the in-app browser through the official Browser runtime; do not proactively choose connected Chrome. Never use OS `open`/`start`/`xdg-open` or an uncontrolled default browser: the ticket is single-use (~60 s). Keep the tab visible and open using that browser runtime's keep/finalize controls. Only after the helper explicitly returns `local loopback is unreachable from this browser` may you release that isolated tab, open a fresh handoff in a controllable connected browser that shares the host's `127.0.0.1`, and retry once with a fresh token. To hand the user a link, give the plain `<BASE>/zh/studio/<projectId>` instead — never the handoff URL.
 
 **A. From a local video file** (most common) — with the tab open from above. Two ways, both keep the video local (no upload):
 
