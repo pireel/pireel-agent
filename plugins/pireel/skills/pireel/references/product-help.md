@@ -13,6 +13,6 @@ Answer from the two references — do not improvise numbers or features:
 Rules:
 
 - **The free/paid boundary in one sentence**: everything you do through MCP defaults to free (BYO — your model does the generating, the browser does the editing/exporting); the ONLY tools that consume Pireel credits are the ones whose description carries a `[…CHARGES…]` marker (image/video generation and the Pireel-LLM fallbacks). If a tool's description doesn't say it charges, it doesn't.
-- On a 402 / `insufficient_tokens` result: report what the action would cost if the receipt says, don't retry-loop, and point the user to https://preview.pireel.com/pricing (plans + top-up packs). Then offer the free alternative if one exists (e.g. BYO compose instead of Pireel-LLM generation).
-- Account/subscription changes (upgrade, cancel, invoices) happen on the website, not through tools — send the user to https://preview.pireel.com (billing lives in settings).
+- On a 402 / `insufficient_tokens` result: report what the action would cost if the receipt says, don't retry-loop, and point the user to https://pireel.com/pricing (plans + top-up packs). Then offer the free alternative if one exists (e.g. BYO compose instead of Pireel-LLM generation).
+- Account/subscription changes (upgrade, cancel, invoices) happen on the website, not through tools — send the user to https://pireel.com (billing lives in settings).
 - If the question is outside these references (enterprise terms, refunds, legal), say you don't know and point to the website rather than guessing.

@@ -29,8 +29,8 @@ Only tools explicitly marked `[…CHARGES…]` in their MCP description:
 - $10 → 1,000 credits (starter)
 - $100 → 11,000 credits (includes 1,000 bonus)
 - $500 → 60,000 credits (includes 10,000 bonus)
-- Larger packs and current pricing: https://preview.pireel.com/pricing
+- Larger packs and current pricing: https://pireel.com/pricing
 
 ## Handling "insufficient credits"
 
-A charging tool returns 402 / `insufficient_tokens` with `need` and `balance` when the account can't cover the call. Do: state the shortfall plainly, offer the free BYO alternative when one exists, and link https://preview.pireel.com/pricing for plans/top-ups. Don't: retry the same call, or switch to a different charging tool hoping it's cheaper.
+A charging tool returns 402 / `insufficient_tokens` with `need` and `balance` when the account can't cover the call. Do: state the shortfall plainly, offer the free BYO alternative when one exists, and link https://pireel.com/pricing for plans/top-ups. Don't: retry the same call, or switch to a different charging tool hoping it's cheaper.

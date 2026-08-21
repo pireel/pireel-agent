@@ -15,7 +15,7 @@
  * Metadata probing (ffprobe) + audio transcription (ffmpeg) are optional.
  *
  * Usage (normal flow — the agent gets `token` from the `import_media` MCP tool):
- *   node import-media.mjs --token imp1.… [--base https://preview.pireel.com] \
+ *   node import-media.mjs --token imp1.… [--base https://pireel.com] \
  *        [--ffmpeg <path>] [--ffprobe <path>] [--no-transcribe] /path/to/video.mp4 /path/to/logo.png …
  *
  * B-roll mode (--broll): videos stream into the open tab's OPFS library (no
@@ -65,7 +65,7 @@ if (has('explain')) {
   process.exit(0);
 }
 
-const BASE = (opt('base') ?? process.env.PIREEL_BASE ?? 'https://preview.pireel.com').replace(/\/$/, '');
+const BASE = (opt('base') ?? process.env.PIREEL_BASE ?? 'https://pireel.com').replace(/\/$/, '');
 const STUDIO_ORIGIN = new URL(BASE).origin;
 const CRED = opt('token');
 if (!CRED) fail('missing credential: pass --token <import token from the import_media MCP tool>');

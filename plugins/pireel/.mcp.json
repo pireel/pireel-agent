@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "pireel-preview": {
-      "url": "https://preview.pireel.com/api/studio/mcp",
-      "oauth_resource": "https://preview.pireel.com/api/studio/mcp"
+    "pireel": {
+      "url": "https://pireel.com/api/studio/mcp",
+      "oauth_resource": "https://pireel.com/api/studio/mcp"
     }
   }
 }

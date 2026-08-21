@@ -1,7 +1,7 @@
 {
-  "name": "pireel-preview",
+  "name": "pireel-marketplace",
   "interface": {
-    "displayName": "Pireel Preview"
+    "displayName": "Pireel"
   },
   "plugins": [
     {

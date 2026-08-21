@@ -37,7 +37,7 @@ const opt = (name, fallback = null) => {
 };
 
 const OUT_DIR = resolve(opt('out') ?? process.cwd());
-const BASE = (opt('base') ?? process.env.PIREEL_BASE ?? 'https://preview.pireel.com').replace(/\/$/, '');
+const BASE = (opt('base') ?? process.env.PIREEL_BASE ?? 'https://pireel.com').replace(/\/$/, '');
 const TIMEOUT_MS = Math.max(1, Number(opt('timeout-min') ?? 30)) * 60_000;
 const MAX_BYTES = 8 * 1024 * 1024 * 1024; // 8 GB — far above any real export
 

@@ -1,7 +1,7 @@
 {
   "name": "pireel",
-  "version": "0.7.0-preview.3",
-  "description": "Preview Pireel's latest agent workflows for editing multi-source videos and creating finished cuts.",
+  "version": "0.7.0",
+  "description": "Edit multi-source videos and create finished cuts in Pireel Studio from your AI agent.",
   "author": {
     "name": "Pireel",
     "url": "https://pireel.com"
@@ -10,23 +10,23 @@
   "mcpServers": "./.mcp.json",
   "skills": "./skills/",
   "interface": {
-    "displayName": "Pireel Studio Preview",
+    "displayName": "Pireel Studio",
     "defaultPrompt": [
       "Turn these source clips into three distinct short-video cuts",
       "Clean up this talking-head and add purposeful graphics",
       "Build a product montage with captions and a clear visual rhythm"
     ],
-    "shortDescription": "Try the latest Pireel agent workflows",
-    "longDescription": "This preview channel connects to Pireel's isolated preview environment and ships the latest workflow before public release. It supports local media import, transcript editing, montage and multi-output variants, designed graphics, captions, themes, framing and local export. Edits remain visible and editable in Pireel Studio Preview.",
+    "shortDescription": "Edit videos from your AI agent",
+    "longDescription": "Connect your AI agent to Pireel Studio for local media import, transcript editing, montage and multi-output variants, designed graphics, captions, themes, framing and local export. Every result remains visible and editable in the Studio timeline.",
     "developerName": "Pireel",
     "category": "Design",
     "capabilities": [
       "Read",
       "Write"
     ],
-    "websiteURL": "https://preview.pireel.com",
-    "privacyPolicyURL": "https://preview.pireel.com/en/privacy",
-    "termsOfServiceURL": "https://preview.pireel.com/en/terms",
+    "websiteURL": "https://pireel.com",
+    "privacyPolicyURL": "https://pireel.com/en/privacy",
+    "termsOfServiceURL": "https://pireel.com/en/terms",
     "brandColor": "#17181b",
     "composerIcon": "./assets/logo.png",
     "logo": "./assets/logo.png"

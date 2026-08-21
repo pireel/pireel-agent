@@ -1,10 +1,10 @@
 {
   "production": {
     "branch": "main",
-    "pluginRoot": "pireel",
+    "pluginRoot": "plugins/pireel",
     "marketplace": "pireel-marketplace",
-    "pluginVersion": "0.4.0",
-    "workflowVersion": "2026-08-04.3",
+    "pluginVersion": "0.7.0",
+    "workflowVersion": "2026-08-21.1",
     "mcpServer": "pireel",
     "baseUrl": "https://pireel.com"
   },

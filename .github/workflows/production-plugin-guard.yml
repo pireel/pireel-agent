@@ -1,0 +1,23 @@
+name: production plugin isolation guard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: verify production release channel
+        env:
+          PIREEL_RELEASE_BRANCH: main
+        run: node scripts/release-channel.mjs production --check
+      - name: reject Preview identities in the production bundle
+        run: |
+          if grep -R -n -E 'https://preview\.pireel\.com|pireel-preview|Pireel Studio Preview' plugins/pireel; then
+            echo "::error::Production Plugin contains a Preview endpoint or identity."
+            exit 1
+          fi

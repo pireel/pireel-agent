@@ -45,7 +45,7 @@ Direct injection is a capability fallback, not an authentication or server-error
 the helper reaches Pireel but returns HTTP 401 with a freshly issued import token, or reports
 `server_misconfigured`, stop and surface that infrastructure error. Do not drive hidden file inputs,
 write a custom upload client, create a carrier video, or install a local ASR stack to route around it.
-If it reports `local loopback is unreachable from this browser`, keep the same Preview project,
+If it reports `local loopback is unreachable from this browser`, keep the same project,
 open a fresh handoff in one controllable connected browser that shares the host loopback, close/release
 the isolated in-app tab, and retry the helper once with a fresh token. This is an error-triggered
 fallback, never the initial browser choice.

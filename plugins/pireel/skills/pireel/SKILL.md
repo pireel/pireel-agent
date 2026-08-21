@@ -1,11 +1,11 @@
 ---
 name: pireel
-description: Edit videos in Pireel Studio Preview through the `pireel-preview` MCP server — first-run setup, local and stock media import, transcript editing, multi-source montage, multiple editable outputs, storyboarding, designed graphics, captions, themes and export. Read this whenever the user wants to install/connect Pireel Preview or edit, cut, remix, storyboard, illustrate, caption, theme or export a Pireel video, and before the first Pireel Preview MCP call or after a tool failure. Routes to the matching bundled playbook.
+description: Edit videos in Pireel Studio through the `pireel` MCP server — first-run setup, local and stock media import, transcript editing, multi-source montage, multiple editable outputs, storyboarding, designed graphics, captions, themes and export. Read this whenever the user wants to install/connect Pireel or edit, cut, remix, storyboard, illustrate, caption, theme or export a Pireel video, and before the first Pireel MCP call or after a tool failure. Routes to the matching bundled playbook.
 ---
 
 # Pireel Studio
 
-Pireel Studio Preview (https://preview.pireel.com) is a multi-source video editor that can produce multiple independently editable cuts from one project. Your tools edit the composition **live in the user's open studio browser tab** via the `pireel-preview` MCP server; when no tab is open, data-level tools fall back to **OFFLINE MODE** against the user's latest Preview project.
+Pireel Studio (https://pireel.com) is a multi-source video editor that can produce multiple independently editable cuts from one project. Your tools edit the composition **live in the user's open studio browser tab** via the `pireel` MCP server; when no tab is open, data-level tools fall back to **OFFLINE MODE** against the user's latest project.
 
 This one skill covers the whole product. Skim the essentials below, then **open the matching file in `references/` for the task at hand** — don't work from memory on the specialized flows.
 
