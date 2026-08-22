@@ -12,7 +12,7 @@ captions and sound share one argument, rhythm and visual system.
 ## Understand the material before designing
 
 Start with `get_state` and `get_timeline`. Inspect `list_assets` / `search_assets`, and read the spoken
-material with `read_script` or `extract_asr` when its actual wording or timing matters. Inspect real
+material with `read_script` when its actual wording or timing matters. It reuses stored text and transcribes only when needed. Inspect real
 frames only where picture evidence is needed; do not infer what an unviewed clip contains.
 
 Derive the likely solution progressively from the material. Resolve consequential uncertainty about:

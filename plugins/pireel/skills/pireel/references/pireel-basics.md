@@ -25,7 +25,7 @@ The MCP endpoint is `https://pireel.com/api/studio/mcp`. Auth is OAuth — the a
 
 ## The two clocks (get this wrong and cuts land in the wrong place)
 
-1. **Source seconds** — a source file's own clock. The spoken transcript (`read_script` / `extract_asr`) is timestamped in MAIN-source seconds, and those timestamps **never shift when the video is cut**. Fetch the transcript once; it stays valid the whole session.
+1. **Source seconds** — a source file's own clock. The spoken transcript returned by `read_script` is timestamped in MAIN-source seconds, and those timestamps **never shift when the video is cut**. Fetch the transcript once; it stays valid the whole session.
 2. **Edited seconds** — the final-timeline clock. `cut_range`, `split_shot`, `trim_shot`, `move_block`, `resize_block`, `atSec` parameters all address THIS clock. Every cut shifts later content earlier.
 
 `cut_narration` is the bridge: pass it transcript (source-second) ranges and it converts to the edited timeline itself, cuts the footage, compresses overlays, and re-lays captions.
@@ -35,7 +35,7 @@ Shots tagged `[clip X]` in state were inserted from a **different source file**:
 ## State discipline
 
 - **Always call `get_state` before your first edit**, and again whenever you are unsure what the timeline looks like. Every mutation invalidates your previous snapshot. Tool receipts describe what each call changed — trust them for the ids they mention.
-- The transcript is NOT in `get_state`. Fetch it via `read_script` (or reuse an `extract_asr` receipt). Don't call both; don't re-fetch it after cuts (source clock, remember).
+- The transcript is NOT in `get_state`. Fetch it once via `read_script`; it returns stored text or transcribes when missing. Don't re-fetch it after cuts (source clock, remember).
 - Never invent block/shot ids. Only use ids from `get_state` or tool receipts.
 
 ## You are the model (BYO-brain — the default generation path)
@@ -54,7 +54,7 @@ Hosted generation tools whose descriptions carry a charge marker use Pireel cred
 | Request | Tools |
 | --- | --- |
 | What's on the timeline? | `get_state` |
-| What does the speaker say? | `read_script` (main narration + inserted clips; `extract_asr` if no transcript yet) |
+| What does the speaker say? | `read_script` (main narration + inserted clips; automatically transcribes missing speech) |
 | Move / retime an overlay | `move_block`, `resize_block` |
 | Reposition / resize an overlay ON SCREEN (into a corner, off the speaker's face) | `place_block` (anchor or % coords; each block's current zone shows in `get_state`) |
 | Remove overlays | `delete_block`, `delete_blocks` (several in one call) |
@@ -67,7 +67,7 @@ Hosted generation tools whose descriptions carry a charge marker use Pireel cred
 | Shot sound — quiet or mute a shot's own audio (e.g. B-roll under narration) | `set_shot_audio` (`volumeDb` -60..0 and/or `mute`; batch via `shotIds`/`all:true`) |
 | Find a described reusable asset (name/category/mood/use case) | `search_assets` across `mine` / `cloud` / `official` (works with the tab closed; use returned locators, never invent a URL) |
 | What media has the user uploaded? | `list_assets` (works with the tab closed; use its urls for block images / `insert_clip`) |
-| Find a spoken topic already present in the current `read_script` / `extract_asr` result | Reason over the numbered transcript rows directly; do not call a lexical search tool |
+| Find a spoken topic already present in the current `read_script` result | Reason over the numbered transcript rows directly; do not call a lexical search tool |
 | Retrieve a spoken/visual moment missing from current context (cold/truncated transcript, multiple sources, visual labels) | `search_media` (stable source-clock segments; this is not the reusable asset library or web search) |
 | Cut video at a point / trim an end | `split_shot`, `trim_shot` |
 | Remove a whole shot | `delete_shot` |
@@ -84,7 +84,7 @@ Hosted generation tools whose descriptions carry a charge marker use Pireel cred
 
 ## Patience with slow tools
 
-`extract_asr` and `analyze_visual` run **in the user's browser** and can take minutes (visual geometry is frame-by-frame; semantic mode adds sparse hosted understanding). A slow response is not a failure — do not retry just because a call takes long. Card-type tools have a 10-minute bridge timeout; instant operations time out at 60s.
+`read_script` when it must transcribe, and `analyze_visual`, run **in the user's browser** and can take minutes (visual geometry is frame-by-frame; semantic mode adds sparse hosted understanding). A slow response is not a failure — do not retry just because a call takes long. Card-type tools have a 10-minute bridge timeout; instant operations time out at 60s.
 
 ## Local media import
 

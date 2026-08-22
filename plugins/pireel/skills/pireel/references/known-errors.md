@@ -26,7 +26,7 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 **Recovery**:
 1. Ask the user to bring the studio tab to the FOREGROUND (background tabs get throttled by the browser) and keep the machine awake.
 2. Call `get_state` — the operation may have completed after the bridge stopped waiting.
-3. Only then retry, once. For `extract_asr` / `analyze_visual` remember they are minute-scale by design and cached per file — a retry after a real timeout resumes cheaply, but a retry fired at a still-running job just queues noise.
+3. Only then retry, once. For `read_script` when it must transcribe, and for `analyze_visual`, remember they are minute-scale by design and cached per file — a retry after a real timeout resumes cheaply, but a retry fired at a still-running job just queues noise.
 
 ## `capture_frame` / `export_video` — `Failed to fetch`, or fonts look plain
 

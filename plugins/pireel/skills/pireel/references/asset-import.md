@@ -34,7 +34,7 @@ const chooser = await chooserPromise;
 await chooser.setFiles('/absolute/path/to/video.mp4');
 ```
 
-The studio reads the file locally into its OPFS library and makes it the main video — nothing is uploaded. Then transcribe with the `extract_asr` MCP tool (it runs in the tab; note this route skips the helper's ffprobe/transcript step). Do not call `locator.setInputFiles`: the supported browser API exposes file selection through the chooser object.
+The studio reads the file locally into its OPFS library and makes it the main video — nothing is uploaded. Then call the `read_script` MCP tool; it returns a stored transcript or transcribes in the tab when missing (note this route skips the helper's ffprobe/transcript step). Do not call `locator.setInputFiles`: the supported browser API exposes file selection through the chooser object.
 
 Both routes converge after the bytes enter the tab: the same local import session classifies the
 media, persists it to OPFS, and writes the same metadata-only `localAssets` project index used by
@@ -67,7 +67,7 @@ The JSON keeps video import and transcription outcomes separate. `transcription.
 - `skipped` — disabled, no audio track, or ffmpeg was unavailable.
 - `failed` — billing, authentication, upload, storage, or provider failure. The video is still imported, and `error`, optional `http_status`, and a short `detail` explain what needs recovery.
 
-Never interpret `transcript: 0` alone as “the video has no speech.” Check `transcription.status`: for `failed`, surface the error and recover it (for example, let the user add credits for `insufficient_tokens`, then run `extract_asr` in the open Studio tab). Do not repeatedly re-import the local video just to retry transcription.
+Never interpret `transcript: 0` alone as “the video has no speech.” Check `transcription.status`: for `failed`, surface the error and recover it (for example, let the user add credits for `insufficient_tokens`, then call `read_script` in the open Studio tab). Do not repeatedly re-import the local video just to retry transcription.
 
 Full flow: open a tab if none is → `import_media` (no args, MCP) → token + `base_url` → run helper with both `--base` and `--token` → read the JSON → `get_state`.
 
@@ -93,8 +93,8 @@ Resolution order: `--ffmpeg`/`--ffprobe` flags → `FFMPEG_PATH`/`FFPROBE_PATH` 
 If the package manager itself is unavailable or the install command is denied, THEN fall back to a degraded import and tell the user what was skipped. Capability tiers:
 
 - **Both available**: full import — duration/dims registered, transcript ready; transcript-based editing (`read_script`, `cut_narration`, Director planning, captions) can start immediately.
-- **ffprobe only**: metadata registered, no transcript. Transcription happens later in the browser (`extract_asr`).
-- **Neither**: the video still streams into the open tab and registers; only metadata/transcript are deferred (the browser completes dimensions on load, and `extract_asr` produces the transcript later). Nothing is lost, just deferred.
+- **ffprobe only**: metadata registered, no transcript. Transcription happens later in the browser when `read_script` is called.
+- **Neither**: the video still streams into the open tab and registers; only metadata/transcript are deferred (the browser completes dimensions on load, and `read_script` produces the transcript later). Nothing is lost, just deferred.
 
 ## Images
 
@@ -118,7 +118,7 @@ node import-media.mjs --token … /path/to/track.mp3
 
 Pass `registration` unchanged as one item in `register_media.assets`, then place it with `add_clips`. Choose `role: "narration"`, `"music"` or `"sfx"` from the user's intent; do not route spoken teaching audio through `set_bgm`. The typed clip can then be trimmed, split, muted, leveled, faded or speed-adjusted like other timeline media.
 
-The helper probes duration but does not automatically transcribe standalone audio. When meaning or performed timing matters, call `extract_asr` with its exact `localSig` or registered `assetId`. The original bytes remain device-local; only the compressed ASR payload follows Pireel's disclosed transcription path when ASR is requested.
+The helper probes duration but does not automatically transcribe standalone audio. When meaning or performed timing matters, call `read_script` with its exact `localSig` or registered `assetId`; it reuses stored text and transcribes only when missing. The original bytes remain device-local; only the compressed ASR payload follows Pireel's disclosed transcription path when ASR is requested.
 
 ## B-roll (insert a clip into the timeline)
 
