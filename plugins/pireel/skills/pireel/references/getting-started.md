@@ -66,7 +66,7 @@ Ask the user how to start, then do it:
 **A. From a local video file** (most common) — with the tab open from above. Two ways, both keep the video local (no upload):
 
 - **Primary — the helper**: `import_media` with NO args → `token` + `base_url` → run `node <helper> --base <base_url> --token <token> /path/to/video.mp4` (bundled at `<pireel-skill-dir>/scripts/import-media.mjs`, or `curl -fsSL <base_url>/import-media.mjs`; install `ffmpeg`/`ffprobe` yourself if missing). Use the returned `base_url` exactly so preview connections never fall through to production. It streams the video into the open tab over the user's machine (not uploaded), transcribes, and registers a project in one shot. If it reports `studio_not_open`, redo the handoff and re-run.
-- **Fallback — inject it directly** (helper unavailable, and you drive the browser): start `tab.playwright.waitForEvent('filechooser')`, click `tab.playwright.locator('[data-pireel-video-trigger]')`, then pass the absolute path to the returned chooser's `setFiles(...)`. The studio loads it locally into its OPFS library and makes it the main video. Then call `extract_asr` for the transcript.
+- **Fallback — inject it directly** (helper unavailable, and you drive the browser): start `tab.playwright.waitForEvent('filechooser')`, click `tab.playwright.locator('[data-pireel-video-trigger]')`, then pass the absolute path to the returned chooser's `setFiles(...)`. The studio loads it locally into its OPFS library and makes it the main video. Then call `read_script`; it returns a stored transcript or transcribes when missing.
 
 Then `get_state` and edit. See the `asset-import` skill for the full transfer matrix.
 
