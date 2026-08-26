@@ -3,8 +3,8 @@
     "branch": "main",
     "pluginRoot": "plugins/pireel",
     "marketplace": "pireel-marketplace",
-    "pluginVersion": "0.7.1",
-    "workflowVersion": "2026-08-22.1",
+    "pluginVersion": "0.7.2",
+    "workflowVersion": "2026-08-26.1",
     "mcpServer": "pireel",
     "baseUrl": "https://pireel.com"
   },
