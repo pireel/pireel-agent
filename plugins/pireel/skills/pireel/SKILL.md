@@ -23,6 +23,7 @@ This one skill covers the whole product. Skim the essentials below, then **open 
 |---|---|
 | Install / connect / set up Pireel, or a tool reports it's not connected | `references/getting-started.md` |
 | Understand the model + tool routing in depth (read before the first edit) | `references/pireel-basics.md` |
+| Use an account private/community Studio Skill or its bound voice | `references/pireel-basics.md` |
 | Use a LOCAL video or image file | `references/asset-import.md` |
 | Mix several clips, make product ads, or create multiple editable outputs / variants | `references/montage-variants.md` |
 | Clean up a raw talking-head A-roll (retakes, filler, dead air) | `references/talking-head-cleanup.md` |

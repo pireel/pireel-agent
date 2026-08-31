@@ -38,6 +38,12 @@ Shots tagged `[clip X]` in state were inserted from a **different source file**:
 - The transcript is NOT in `get_state`. Fetch it once via `read_script`; it returns stored text or transcribes when missing. Don't re-fetch it after cuts (source clock, remember).
 - Never invent block/shot ids. Only use ids from `get_state` or tool receipts.
 
+## Account Studio Skills and bound voices
+
+Studio Skills belong to the authenticated Pireel account and are separate from this installed MCP workflow Skill. When the user names one, call `list_skills` to resolve its exact id, then `read_skill` and follow the returned playbook as a whole. `list_skills` returns metadata only; private instructions are disclosed only by the explicit account-scoped read. The playbook describes editorial judgment and acceptance criteria, while the MCP tools remain stable general capabilities—never translate internal function names or model parameters into the Skill contract.
+
+If the selected Studio Skill explicitly binds a named voice, that binding is the user's voice choice for this workflow. Call `list_voices` with the exact name to resolve its stable `voiceId`; if exactly one ready match exists, use it with `generate_speech` without asking the user to pick the same voice again. If it is missing, ambiguous, or not ready, report that concrete blocker. Keep script approval, billing, and performance-direction behavior governed by the selected Skill and the charge warning on `generate_speech`.
+
 ## You are the model (BYO-brain — the default generation path)
 
 For a complete edit, read `storyboard-draft.md` before mutating the timeline. It defines the shared whole-film method: inspect the material, propose a creative thesis/rhythm/video design system, delivery safe-area contract and Scene progression, wait for approval, persist it with `set_director_plan`, progressively author whole-canvas Scene designs with `set_scene_designs`, compile them into the timeline, then review temporal states, boundaries and sound. Read persisted artifacts by affected `sceneIds`; load the whole file only for a whole-edit audit.
@@ -54,6 +60,8 @@ Hosted generation tools whose descriptions carry a charge marker use Pireel cred
 | Request | Tools |
 | --- | --- |
 | What's on the timeline? | `get_state` |
+| Use a private/community Studio Skill | `list_skills` → `read_skill` |
+| Resolve a Skill-bound voice | `list_voices {query:<exact name>}` → `generate_speech {voiceId}` |
 | What does the speaker say? | `read_script` (main narration + inserted clips; automatically transcribes missing speech) |
 | Move / retime an overlay | `move_block`, `resize_block` |
 | Reposition / resize an overlay ON SCREEN (into a corner, off the speaker's face) | `place_block` (anchor or % coords; each block's current zone shows in `get_state`) |
