@@ -1,8 +1,7 @@
 ---
 name: audio-and-music
-description: Craft rules for sound in Pireel Studio — background music (set_bgm / generate_music), per-clip sound (set_shot_audio), narration / music / SFX audio clips (register_media + add_clips), transitions (add_transition), beat-aligned cuts (get_beat_grid), noise cleanup (denoise_audio) and speed changes (set_video_speed). Read before adding or fitting music or sound effects, changing levels, or placing transitions.
+description: Craft rules for sound in Pireel Studio: background music (set_bgm / generate_music), per-clip sound (set_shot_audio), narration / music / SFX audio clips (register_media + add_clips), transitions (add_transition), beat-aligned cuts (get_beat_grid), noise cleanup (denoise_audio) and speed changes (set_video_speed). Read before adding or fitting music or sound effects, changing levels, or placing transitions.
 ---
-
 # Sound, music and transitions
 
 Sound is what makes an edit feel finished or amateurish long before anyone notices a graphic. The
@@ -12,8 +11,8 @@ on the timeline and moving on.
 
 ## Where music comes from (cheapest first)
 
-1. **The user's own file** — import it with the local helper (`asset-import.md`, audio row), then use
-   its url / registration.
+1. **The user's own file** — bring it in through the local import helper (agent plugins: the
+   `asset-import` reference, audio row) or the Studio upload panel, then use its url / registration.
 2. **Already available audio** — `list_assets {kind:"audio"}` or `search_assets` across
    `mine` / `cloud` / `official`; use the returned locator, never an invented url.
 3. **Generate** — `generate_music` charges Pireel credits: state the cost and get a yes first. Prompt

@@ -40,9 +40,9 @@ Shots tagged `[clip X]` in state were inserted from a **different source file**:
 - The transcript is NOT in `get_state`. When the edit depends on spoken words, fetch it once via `read_script`; it returns stored text or transcribes when missing. Don't re-fetch it after cuts (source clock, remember).
 - Never invent block/shot/clip ids. Only use ids from `get_state`, `get_timeline` or tool receipts.
 
-## Account Studio Skills and bound voices
+## Studio Skills: official craft playbooks and account Skills
 
-Studio Skills belong to the authenticated Pireel account and are separate from this installed MCP workflow Skill. When the user names one, call `list_skills` to resolve its exact id, then `read_skill` and follow the returned playbook as a whole. `list_skills` returns metadata only; private instructions are disclosed only by the explicit account-scoped read. The playbook describes editorial judgment and acceptance criteria, while the MCP tools remain stable general capabilities—never translate internal function names or model parameters into the Skill contract.
+`list_skills` returns two kinds of Studio Skill, both separate from this installed MCP workflow Skill: Pireel's **official** built-in craft playbooks (`talking-head-edit`, `montage-edit`, `audio-and-music`, …) — the same files the Studio chat reads, mirrored locally under `references/craft/` — and the authenticated account's private/community Skills. Before a complete edit of a speech-led video, a montage, or sound/music work, read the matching official playbook once and apply it. When the user names an account Skill, call `list_skills` to resolve its exact id, then `read_skill` and follow the returned playbook as a whole. `list_skills` returns metadata only; private instructions are disclosed only by the explicit account-scoped read. The playbook describes editorial judgment and acceptance criteria, while the MCP tools remain stable general capabilities—never translate internal function names or model parameters into the Skill contract.
 
 If the selected Studio Skill explicitly binds a named voice, that binding is the user's voice choice for this workflow. Call `list_voices` with the exact name to resolve its stable `voiceId`; if exactly one ready match exists, use it with `generate_speech` without asking the user to pick the same voice again. If it is missing, ambiguous, or not ready, report that concrete blocker. Keep script approval, billing, and performance-direction behavior governed by the selected Skill and the charge warning on `generate_speech`.
 
@@ -75,7 +75,7 @@ Hosted generation tools whose descriptions carry a charge marker use Pireel cred
 | Video framing / zoom | `set_shot_treatment` |
 | Color-grade a shot | `set_video_filter` (brightness/contrast/saturate, 1 = untouched) |
 | Shot sound — quiet or mute a shot's own audio (e.g. B-roll under narration) | `set_shot_audio` (`volumeDb` -60..0, `mute`, `fadeInSec`/`fadeOutSec`; batch via `shotIds`/`all:true`) |
-| Background music: add / level / trim / fade / split / remove | `set_bgm` (`url` from `list_assets`, an imported audio file, or `generate_music`) — craft rules in `audio-and-music.md` |
+| Background music: add / level / trim / fade / split / remove | `set_bgm` (`url` from `list_assets`, an imported audio file, or `generate_music`) — craft rules in `craft/audio-and-music.md` |
 | Generate an original music bed | `generate_music` (charges credits — confirm first) → `set_bgm {url}` |
 | Place narration / music / SFX as typed audio clips (imported or generated audio) | `register_media` → `add_clips {role: "narration" \| "music" \| "sfx"}` |
 | Transition at a shot boundary | `add_transition {atSec, effect, durationSec}` (`effect:"none"` removes) |

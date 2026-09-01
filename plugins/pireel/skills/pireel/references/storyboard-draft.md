@@ -77,7 +77,7 @@ duration. Existing projects may already carry a plan; read it with `read_directo
 Use the batched tools to cut, place, move, resize, frame, crop, layer and mix real media: `split_shot`
 / `cut_range` / `cut_narration` for the cut; `add_clips` / `insert_clips` / `move_clips` for media;
 `set_shot_framing` / `apply_layout` for the picture; `set_bgm` / `set_shot_audio` / `add_clips
-{role:"sfx"}` for sound (craft in `audio-and-music.md`); `add_transition` only where a boundary means a
+{role:"sfx"}` for sound (craft in `craft/audio-and-music.md`); `add_transition` only where a boundary means a
 change of time, place, chapter or mode; `set_captions` for subtitles. Let source people, products,
 interfaces and evidence remain primary when they carry the meaning. Do not add layers to meet a count:
 a clean source-led passage may be the strongest design.

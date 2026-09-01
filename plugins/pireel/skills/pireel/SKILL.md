@@ -26,12 +26,16 @@ This one skill covers the whole product. Skim the essentials below, then **open 
 | Understand the model + tool routing in depth (read before the first edit) | `references/pireel-basics.md` |
 | Use an account private/community Studio Skill or its bound voice | `references/pireel-basics.md` |
 | Use a LOCAL video or image file | `references/asset-import.md` |
-| Mix several clips, make product ads, or create multiple editable outputs / variants | `references/montage-variants.md` |
-| Edit footage that has no speech (B-roll, product shots, screen recordings, music-led material) | `references/pireel-basics.md` (clip tools) → `references/montage-variants.md` for a deliberate assembly |
-| Clean up a raw talking-head A-roll (retakes, filler, dead air) | `references/talking-head-cleanup.md` |
-| Add / fit background music, sound effects, per-clip sound, transitions, or beat-aligned cuts | `references/audio-and-music.md` |
+| Edit a speech-led video end to end (interview, lesson, commentary, podcast, direct-to-camera): cleanup, restructure, B-roll, graphics, sound | `references/craft/talking-head-edit.md` |
+| Clean up a raw talking-head A-roll only (retakes, filler, dead air) | `references/talking-head-cleanup.md` |
+| Compose a montage from a body of footage (emotion, motifs, rhythm, sound) | `references/craft/montage-edit.md`, then `references/montage-variants.md` for output families / variants |
+| Mix several clips into product ads or create multiple editable outputs / variants | `references/montage-variants.md` |
+| Edit footage that has no speech (B-roll, product shots, screen recordings, music-led material) | `references/pireel-basics.md` (clip tools) → `references/craft/montage-edit.md` for a deliberate assembly |
+| Add / fit background music, sound effects, per-clip sound, transitions, or beat-aligned cuts | `references/craft/audio-and-music.md` |
 | Add a designed graphic block (BYO HTML) | `references/compose-blocks.md` |
 | Design or execute a complete first cut / finished video | `references/storyboard-draft.md` |
+
+`references/craft/` holds Pireel's built-in craft skills verbatim — the same playbooks the Studio chat uses and that `list_skills` / `read_skill` serve over MCP. Read the local copy (no round trip); if the MCP server announces a newer workflow baseline than your installed `VERSION`, prefer `read_skill` for the freshest text.
 | Add / restyle captions | `references/captions.md` |
 | Export an MP4 | `references/export.md` |
 | Answer pricing / credits / plan / UI questions | `references/product-help.md` |
