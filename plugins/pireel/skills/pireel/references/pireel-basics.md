@@ -16,27 +16,29 @@ These are your host's own browser-runtime controls, not Pireel MCP tools — use
 
 The MCP endpoint is `https://pireel.com/api/studio/mcp`. Auth is OAuth — the agent's `mcp login` / first-use flow opens the browser; there are no API keys. On HTTP 401, re-run the OAuth login for `pireel`.
 
-## The composition: timeline layers inside designed Scenes
+## The composition: typed tracks, shots and Components
 
-- **Components / overlay blocks** — Component is the broad extensible visual-element concept. Motion Graphics are its primary current family: kinetic words, one-number reveals, data stories, logo stings, overlays and real-source highlights. The editor stores Components as blocks. They are layers inside a composed Scene, not the Scene itself.
-- **Video shots** — segments of source video with editable framing. Familiar full/punch/corner/split treatments are convenience recipes, not the design vocabulary. Scene design may combine custom transforms, crops, media, type and Motion Graphics. A hard cut is only one valid boundary; continuity, motivated match/action changes and restrained transitions are derived from adjacent Scene designs rather than added as decoration.
-- **Typed timeline clips** — narrative, ordinary visual media, graphics, audio and captions live on explicit tracks. `get_timeline` is the canonical read surface; generic insert/move/resize/split/delete operations address selected clips rather than assuming one special main lane.
-- **Director Scenes** — a saved complete-edit plan divides the viewing experience by changes in viewer task or visual anchor. Each Scene inherits one whole-film design system and owns the timeline layers that execute it. `scene-designs.md` then persists each Scene's open whole-canvas composition, temporal choreography and handoff before those ideas are compiled into atomic edits.
+- **Typed timeline clips** — the primary video story spine, concurrent B-roll / PiP video, images, narration / music / SFX audio and captions live on explicit tracks. `get_timeline` is the canonical read surface; `add_clips` / `insert_clips` / `move_clips` / `split_clips` / `remove_clips` / `set_clip_properties` address exact clips on any track rather than assuming one special main lane. This is the same model as any multi-track NLE.
+- **Video shots** — segments of the visual clips with editable framing, speed, color filter and sound. Familiar full / punch-in / corner / split treatments (`set_shot_treatment`) are convenience recipes; `set_shot_framing`, `set_media_transform` and `set_media_crop` give exact control. A shot boundary is a hard cut by default; `add_transition` adds a real dual-stream transition where a change of time, place, chapter or emotional mode earns one.
+- **Components / overlay blocks** — Component is the broad extensible visual-element concept. Motion Graphics are its primary current family: kinetic words, one-number reveals, data stories, logo stings, overlays and real-source highlights. The editor stores Components as blocks. They are layers over the footage, never a substitute for editing the footage itself.
+- **Director Plan (optional)** — a saved complete-edit plan that divides a long piece into Semantic Scenes with one whole-film design system, so `review_sequence` can review and `compose_block_brief` can target Scenes by id. It is a planning convenience for long or multi-session edits and for Studio Skills that ask for one; it is **never a prerequisite** for cutting, placing, framing, sound or graphics. Most edits — including complete first cuts of short pieces — compile directly with the atomic tools.
 
 ## The two clocks (get this wrong and cuts land in the wrong place)
 
-1. **Source seconds** — a source file's own clock. The spoken transcript returned by `read_script` is timestamped in MAIN-source seconds, and those timestamps **never shift when the video is cut**. Fetch the transcript once; it stays valid the whole session.
-2. **Edited seconds** — the final-timeline clock. `cut_range`, `split_shot`, `trim_shot`, `move_block`, `resize_block`, `atSec` parameters all address THIS clock. Every cut shifts later content earlier.
+1. **Source seconds** — a source file's own clock. A transcript returned by `read_script` is timestamped in that source's seconds, and those timestamps **never shift when the video is cut**. Fetch a transcript once; it stays valid the whole session.
+2. **Edited seconds** — the final-timeline clock. `cut_range`, `split_shot`, `trim_shot`, `move_block`, `resize_block`, `set_bgm`, `add_transition`, `atSec` parameters all address THIS clock. Every cut shifts later content earlier.
 
-`cut_narration` is the bridge: pass it transcript (source-second) ranges and it converts to the edited timeline itself, cuts the footage, compresses overlays, and re-lays captions.
+`cut_narration` is the bridge for spoken footage: pass it transcript (source-second) ranges and it converts to the edited timeline itself, cuts the footage, compresses overlays, and re-lays captions.
 
-Shots tagged `[clip X]` in state were inserted from a **different source file**: their `src` times belong to that file, not the narration transcript. Transcript-based cutting never touches them — cut inside them with `cut_range` (edited seconds) or drop them with `delete_shot`.
+Shots tagged `[clip X]` in state were inserted from a **different source file**: their `src` times belong to that file, not the primary transcript. Transcript-based cutting never touches them — cut inside them with `cut_range` (edited seconds) or drop them with `delete_shot`.
+
+**Footage without speech** (B-roll, product shots, screen recordings, music-led montage) needs no transcript at all: `get_timeline` gives edited-second positions, and the clip / shot tools above shape it by time, picture and sound. Do not call `read_script` on speechless footage just to "start"; do not ask the user for a script before editing it.
 
 ## State discipline
 
 - **Always call `get_state` before your first edit**, and again whenever you are unsure what the timeline looks like. Every mutation invalidates your previous snapshot. Tool receipts describe what each call changed — trust them for the ids they mention.
-- The transcript is NOT in `get_state`. Fetch it once via `read_script`; it returns stored text or transcribes when missing. Don't re-fetch it after cuts (source clock, remember).
-- Never invent block/shot ids. Only use ids from `get_state` or tool receipts.
+- The transcript is NOT in `get_state`. When the edit depends on spoken words, fetch it once via `read_script`; it returns stored text or transcribes when missing. Don't re-fetch it after cuts (source clock, remember).
+- Never invent block/shot/clip ids. Only use ids from `get_state`, `get_timeline` or tool receipts.
 
 ## Account Studio Skills and bound voices
 
@@ -46,7 +48,7 @@ If the selected Studio Skill explicitly binds a named voice, that binding is the
 
 ## You are the model (BYO-brain — the default generation path)
 
-For a complete edit, read `storyboard-draft.md` before mutating the timeline. It defines the shared whole-film method: inspect the material, propose a creative thesis/rhythm/video design system, delivery safe-area contract and Scene progression, wait for approval, persist it with `set_director_plan`, progressively author whole-canvas Scene designs with `set_scene_designs`, compile them into the timeline, then review temporal states, boundaries and sound. Read persisted artifacts by affected `sceneIds`; load the whole file only for a whole-edit audit.
+For a complete edit (a whole video rather than one local change), read `storyboard-draft.md` before mutating the timeline. Its method is proportional: understand the material, state the direction (briefly for a clear or short brief; as a concise proposal awaiting approval for a broad, expensive or ambiguous one), then compile the edit directly with the batched atomic tools and review it with `review_sequence`. Persisted planning artifacts (`set_director_plan` / `set_scene_designs`) are optional — for long or multi-session pieces, or when the user or a selected Studio Skill asks for one. When such a plan exists, read it by affected `sceneIds`; load the whole thing only for a whole-edit audit.
 
 All text/HTML generation is done by YOUR model, not Pireel's:
 
@@ -72,7 +74,15 @@ Hosted generation tools whose descriptions carry a charge marker use Pireel cred
 | New graphic / rewrite a graphic | Decide Scene/timing/placement/backdrop → `compose_block_brief` → generate → `apply_block` (fallback: hosted `add_block` / `edit_block`) |
 | Video framing / zoom | `set_shot_treatment` |
 | Color-grade a shot | `set_video_filter` (brightness/contrast/saturate, 1 = untouched) |
-| Shot sound — quiet or mute a shot's own audio (e.g. B-roll under narration) | `set_shot_audio` (`volumeDb` -60..0 and/or `mute`; batch via `shotIds`/`all:true`) |
+| Shot sound — quiet or mute a shot's own audio (e.g. B-roll under narration) | `set_shot_audio` (`volumeDb` -60..0, `mute`, `fadeInSec`/`fadeOutSec`; batch via `shotIds`/`all:true`) |
+| Background music: add / level / trim / fade / split / remove | `set_bgm` (`url` from `list_assets`, an imported audio file, or `generate_music`) — craft rules in `audio-and-music.md` |
+| Generate an original music bed | `generate_music` (charges credits — confirm first) → `set_bgm {url}` |
+| Place narration / music / SFX as typed audio clips (imported or generated audio) | `register_media` → `add_clips {role: "narration" \| "music" \| "sfx"}` |
+| Transition at a shot boundary | `add_transition {atSec, effect, durationSec}` (`effect:"none"` removes) |
+| Beat-aligned cuts on music with a known BPM | `get_beat_grid` → `split_clips` / `move_clips` |
+| Slow-mo / speed-up a shot | `set_video_speed` |
+| Clean up noisy narration | `denoise_audio` (`strength` 0..1, default 0.6) |
+| Read any track's clips with exact edited-second positions | `get_timeline` |
 | Find a described reusable asset (name/category/mood/use case) | `search_assets` across `mine` / `cloud` / `official` (works with the tab closed; use returned locators, never invent a URL) |
 | What media has the user uploaded? | `list_assets` (works with the tab closed; use its urls for block images / `insert_clip`) |
 | Find a spoken topic already present in the current `read_script` result | Reason over the numbered transcript rows directly; do not call a lexical search tool |
@@ -101,14 +111,14 @@ When the user points at LOCAL video, image or audio paths, load the `asset-impor
 ## Seeing and offline mode
 
 - `capture_frame {atSec}` renders one frame (video + framing + overlays) as an image — your eyes. Verify visual work after `apply_block`, caption, or framing changes, then fix what looks wrong. Needs the studio tab open.
-- `review_sequence` renders the approved Director Scenes at entrance, development, payoff and exit states in time order, reports deterministic structure/audio problems, and returns exact Scene repair scopes. Use it for complete edits and Scene-level batches; inspect every attached image as a sequence rather than certifying one attractive midpoint.
+- `review_sequence` renders the timeline as a sequence: with a saved Director Plan, each Scene's entrance / development / payoff / exit states with exact Scene repair scopes; without one (the normal case), the midpoint of every visible clip in time order. Use it after a complete edit or any multi-clip batch; inspect every attached image as a sequence rather than certifying one attractive midpoint. Neither tool can *hear* — verify sound decisions from `get_timeline` / `get_state` receipts and invite the user to play the result.
 - When the tab is closed, data-level tools (timeline edits, cuts, block edits, captions, BYO compose/apply and Director Plan) run in OFFLINE MODE against the user's most recently updated cloud project (results carry `offline: true`). Offline is a fallback, not the default: before consequential editing, open the editor so the user can watch. Media-byte analysis, rendered capture/review, local-file materialization and browser export need the live tab.
 
 ## When to ask the user instead of acting
 
 - The request is ambiguous or names an element that doesn't exist — ask ONE short clarifying question, don't guess.
 - Aggressive shortening, restructuring, highlight/short-version, or a generated hook — confirm target length, structure, and what to preserve BEFORE cutting.
-- Before a consequential complete design with no Frame, inspect the material and recommend 1–2 fitting Frames plus themeless when visual direction is genuinely unresolved; wait for the choice. Never block a small local edit on this. Motion Graphics remain a separate editing layer inside the resulting Scenes.
+- Before a consequential complete *creative* build with no Frame, when the visual direction is genuinely unresolved, inspect the material and recommend 1–2 fitting Frames plus themeless, then wait for the choice. A Frame is never required to start cutting, placing, framing or mixing; never block a small local edit or a speech cleanup on it. If the user said to proceed without asking, pick the strongest direction, name it in one sentence, and continue.
 - PROJECTS (no browser): offline tools act on your ACTIVE project = the most-recently-touched one. `list_projects` shows all (newest first = active); `switch_project {project_id}` makes a different one active and returns its state; `create_project` starts a fresh empty one (immediately active); `rename_project` retitles. If get_state reports "no cloud project", call `create_project` (or `import_media`) — don't send the user to a browser just to create one.
 - `studio_not_open` / `studio_tab_closed` — first open your own built-in/embedded browser tab. Ask the user only when no embedded browser exists. For local import, switch to a controllable connected browser only after the embedded attempt explicitly reports the loopback-unreachable error.
 

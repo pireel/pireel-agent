@@ -1,6 +1,6 @@
 ---
 name: known-errors
-description: Meaning and recovery steps for common Pireel MCP errors — studio_not_open, studio_tab_closed, tool_timeout, HTTP 401/409, Director Plan validation and apply_block lint rejection. Use whenever a Pireel tool call fails, errors, or hangs, before retrying anything.
+description: Meaning and recovery steps for common Pireel MCP errors — studio_not_open, studio_tab_closed, tool_timeout, HTTP 401/409, Director Plan validation, review_sequence scene lookups and apply_block lint rejection. Use whenever a Pireel tool call fails, errors, or hangs, before retrying anything.
 ---
 
 # Known errors and recovery
@@ -66,6 +66,12 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 **Meaning**: the whole-film design contract or one Scene is incomplete/invalid. The error identifies a precise path such as a missing rhythm arc, design-system field, visual anchor, treatment, motion/sound/asset plan, B-roll decision, non-positive duration or overlapping interval.
 
 **Recovery**: repair only the named field from the approved proposal, preserve the rest, and call `set_director_plan` again. Do not weaken the plan to chapter titles or invent evidence merely to satisfy validation.
+
+## `review_sequence: none of the requested sceneIds match a saved Director Plan Scene`
+
+**Meaning**: you passed `sceneIds` but the active output has no Director Plan, or those ids belong to another output / an older plan. `review_sequence` itself never requires a plan.
+
+**Recovery**: call it again with `sceneIds` omitted — without a plan it samples every visible clip's midpoint in time order; with a plan it reviews every Scene. Re-read `get_state` if you believed a plan existed.
 
 ## `instruction required` (from `compose_block_brief`)
 
