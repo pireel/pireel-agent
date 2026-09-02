@@ -85,32 +85,49 @@ if (releaseBranch !== channel.branch) {
 
 const pluginRoot = join(root, channel.pluginRoot);
 const pluginPath = join(pluginRoot, '.codex-plugin/plugin.json');
+const claudePluginPath = join(pluginRoot, '.claude-plugin/plugin.json');
 const mcpPath = join(pluginRoot, '.mcp.json');
 const versionPath = join(pluginRoot, 'skills/pireel/VERSION');
 const marketplacePath = join(root, '.agents/plugins/marketplace.json');
+const claudeMarketplacePath = join(root, '.claude-plugin/marketplace.json');
 
 if (!checkOnly) {
-  const plugin = await readJson(pluginPath);
+  const [plugin, claudePlugin] = await Promise.all([readJson(pluginPath), readJson(claudePluginPath)]);
   plugin.version = channel.pluginVersion;
+  claudePlugin.version = channel.pluginVersion;
   await Promise.all([
     writeJson(channelsPath, channels),
     writeJson(pluginPath, plugin),
+    writeJson(claudePluginPath, claudePlugin),
     writeFile(versionPath, `${channel.workflowVersion}\n`),
   ]);
 }
 
-const [plugin, mcp, marketplace, installedWorkflowVersion] = await Promise.all([
+const [plugin, claudePlugin, mcp, marketplace, claudeMarketplace, installedWorkflowVersion] = await Promise.all([
   readJson(pluginPath),
+  readJson(claudePluginPath),
   readJson(mcpPath),
   readJson(marketplacePath),
+  readJson(claudeMarketplacePath),
   readFile(versionPath, 'utf8').then((value) => value.trim()),
 ]);
 const servers = Object.entries(mcp.mcpServers ?? {});
 
 if (plugin.name !== 'pireel') fail(`Plugin name must remain pireel, got ${plugin.name}`);
 if (plugin.version !== channel.pluginVersion) fail(`plugin.json has ${plugin.version}; channel declares ${channel.pluginVersion}`);
+if (claudePlugin.name !== 'pireel') fail(`Claude Code plugin name must remain pireel, got ${claudePlugin.name}`);
+if (claudePlugin.version !== channel.pluginVersion) {
+  fail(`.claude-plugin/plugin.json has ${claudePlugin.version}; channel declares ${channel.pluginVersion}`);
+}
 if (installedWorkflowVersion !== channel.workflowVersion) fail(`VERSION has ${installedWorkflowVersion}; channel declares ${channel.workflowVersion}`);
 if (marketplace.name !== channel.marketplace) fail(`Marketplace has ${marketplace.name}; channel declares ${channel.marketplace}`);
+if (claudeMarketplace.name !== channel.marketplace) {
+  fail(`Claude Code marketplace has ${claudeMarketplace.name}; channel declares ${channel.marketplace}`);
+}
+const claudeMarketplaceEntry = (claudeMarketplace.plugins ?? []).find((entry) => entry.name === 'pireel');
+if (claudeMarketplaceEntry?.source !== `./${channel.pluginRoot}`) {
+  fail(`Claude Code marketplace must list pireel with source ./${channel.pluginRoot}`);
+}
 if (servers.length !== 1 || servers[0][0] !== channel.mcpServer) {
   fail(`Expected exactly one MCP server named ${channel.mcpServer}`);
 }
@@ -118,8 +135,13 @@ for (const field of ['url', 'oauth_resource']) {
   const expected = `${channel.baseUrl}/api/studio/mcp`;
   if (servers[0][1]?.[field] !== expected) fail(`MCP ${field} must be ${expected}`);
 }
+// Claude Code requires an explicit transport; Codex tolerates the extra field.
+if (servers[0][1]?.type !== 'http') fail('MCP server type must be http');
 if (plugin.interface?.websiteURL !== channel.baseUrl) {
   fail(`Plugin websiteURL must be ${channel.baseUrl}`);
+}
+if (claudePlugin.homepage !== channel.baseUrl) {
+  fail(`Claude Code plugin homepage must be ${channel.baseUrl}`);
 }
 
 console.log(`${channelName}: plugin ${channel.pluginVersion}, workflow ${channel.workflowVersion} (${channel.mcpServer})`);
