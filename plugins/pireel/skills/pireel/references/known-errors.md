@@ -1,6 +1,6 @@
 ---
 name: known-errors
-description: Meaning and recovery steps for common Pireel MCP errors — studio_not_open, studio_tab_closed, tool_timeout, HTTP 401/409, Director Plan validation, review_sequence scene lookups and apply_block lint rejection. Use whenever a Pireel tool call fails, errors, or hangs, before retrying anything.
+description: Meaning and recovery steps for common Pireel MCP errors — studio_not_open, studio_tab_closed, tool_timeout, HTTP 401/409, inspect_timeline scene lookups and apply_component lint rejection. Use whenever a Pireel tool call fails, errors, or hangs, before retrying anything.
 ---
 
 # Known errors and recovery
@@ -11,13 +11,13 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 
 **Meaning**: no studio tab is connected to the bridge. The user does not have their Pireel studio project open in a browser, or the tab hasn't finished connecting.
 
-**Recovery**: data-level tools (timeline edits, cuts, block edits, captions, BYO compose/apply and Director Plan) can fall back to OFFLINE MODE against the active cloud project. But offline is a fallback, not the default flow: before consequential editing, open the editor through `create_browser_handoff` in your own visible embedded browser. Media-byte analysis, rendered capture/review, local-file materialization and browser export require the live tab. Never blind-retry—the answer cannot change until a tab connects.
+**Recovery**: data-level tools (timeline edits, cuts, component edits, captions, BYO compose/apply) can fall back to OFFLINE MODE against the active cloud project. But offline is a fallback, not the default flow: before consequential editing, open the editor through `create_browser_handoff` in your own visible embedded browser. Media-byte analysis, rendered capture/review, local-file materialization and browser export require the live tab. Never blind-retry—the answer cannot change until a tab connects.
 
 ## `studio_tab_closed`
 
 **Meaning**: the studio tab disconnected **mid-call** — closed, navigated away, refreshed, or the machine slept.
 
-**Recovery**: re-open a tab (`create_browser_handoff` → built-in browser, or ask the user to re-focus theirs). Then — important — call `get_state` before resuming: the interrupted operation may or may not have applied, and your snapshot is now untrustworthy. Verify what actually landed instead of re-issuing mutations on faith (a repeated cut lands twice).
+**Recovery**: re-open a tab (`create_browser_handoff` → built-in browser, or ask the user to re-focus theirs). Then — important — call `get_state` before resuming: the interrupted operation may or may not have applied, no delta came back, and the model you patched from earlier deltas is now untrustworthy. Verify what actually landed instead of re-issuing mutations on faith (a repeated cut lands twice).
 
 ## `tool_timeout after Ns`
 
@@ -26,13 +26,13 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 **Recovery**:
 1. Ask the user to bring the studio tab to the FOREGROUND (background tabs get throttled by the browser) and keep the machine awake.
 2. Call `get_state` — the operation may have completed after the bridge stopped waiting.
-3. Only then retry, once. For `read_script` when it must transcribe, and for `analyze_visual`, remember they are minute-scale by design and cached per file — a retry after a real timeout resumes cheaply, but a retry fired at a still-running job just queues noise.
+3. Only then retry, once. For `get_transcript` when it must transcribe, and for `inspect_media` in its `semantic` / `editorial` modes, remember they are minute-scale by design and cached per file — a retry after a real timeout resumes cheaply, but a retry fired at a still-running job just queues noise.
 
-## `capture_frame` / `export_video` — `Failed to fetch`, or fonts look plain
+## `inspect_timeline` / `export` — `Failed to fetch`, or fonts look plain
 
 **Meaning**: the video bytes are fully LOCAL, but frame capture and export rasterize on-screen text by inlining webfonts from **Google Fonts** (an external host). A browser that blocks external hosts — notably an in-app/embedded agent browser scoped to local targets — can't fetch them directly.
 
-**Recovery**: nothing to do — font fetches now fall back through Pireel's own same-origin proxy (the server fetches Google Fonts for the browser), so fonts render properly even in restricted browsers; if even the proxy is unreachable (offline / self-hosted shell with no backend), the frame/export still renders with **system fallback fonts** instead of failing. The video, timeline, cuts and layout are unaffected (all local). If you still see `Failed to fetch` from `capture_frame`, the user's tab is on an older build — a refresh picks up the fix.
+**Recovery**: nothing to do — font fetches now fall back through Pireel's own same-origin proxy (the server fetches Google Fonts for the browser), so fonts render properly even in restricted browsers; if even the proxy is unreachable (offline / self-hosted shell with no backend), the frame/export still renders with **system fallback fonts** instead of failing. The video, timeline, cuts and layout are unaffected (all local). If you still see `Failed to fetch` from `inspect_timeline`, the user's tab is on an older build — a refresh picks up the fix.
 
 ## Local helper — `local loopback is unreachable from this browser`
 
@@ -55,38 +55,38 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 
 **Recovery**: stop and report the exact environment and failing operation. Retrying, choosing the same file again, manufacturing a temporary video, or installing/running local Whisper cannot repair server configuration. Preserve the successfully imported local media and resume only after the environment has been fixed.
 
-## `apply_block` lint rejection
+## `apply_component` lint rejection
 
-**Meaning**: not a failure — the validation loop working as intended. The generated block violated a contract rule (unscoped CSS, scripts, non-deterministic animation, etc.); the response lists the exact issues.
+**Meaning**: not a failure — the validation loop working as intended. The generated component violated a contract rule (unscoped CSS, scripts, non-deterministic animation, etc.); the response lists the exact issues.
 
-**Recovery**: the failure receipt returns a `blockId` (the id the block WILL have). Fix ONLY the listed issues in your generated text, **scope every CSS selector under `#<that blockId>`**, and call `apply_block` again passing that same `blockId` back verbatim (plus the same `atSec`). Reusing the id keeps the scope target stable across retries — for a brand-new block, do NOT omit `blockId` on the retry or a fresh id is minted and the scope never matches. Do not regenerate from scratch or change unrelated parts. If issues persist after 2–3 targeted fixes, re-read the `compose_block_brief` contract; last resort, `add_block`/`edit_block` (charges Pireel credits — say so).
+**Recovery**: the failure receipt returns a `clipId` (the id the component clip WILL have). Fix ONLY the listed issues in your generated text, **scope every CSS selector under `#<that clipId>`**, and call `apply_component` again passing that same `clipId` back verbatim (plus the same `atFrame`, `durationFrames` and `placement`). Reusing the id keeps the scope target stable across retries — for a brand-new component, do NOT omit `clipId` on the retry or a fresh id is minted and the scope never matches. Do not regenerate from scratch or change unrelated parts. If issues persist after 2–3 targeted fixes, re-read the `compose_component` contract; last resort, `apply_component {generate:true, instruction}` (charges Pireel credits — say so).
 
-## `set_director_plan` rejection
+## Persisted plan tools
 
-**Meaning**: the whole-film design contract or one Scene is incomplete/invalid. The error identifies a precise path such as a missing rhythm arc, design-system field, visual anchor, treatment, motion/sound/asset plan, B-roll decision, non-positive duration or overlapping interval.
+**Meaning**: there is no saved Director Plan or Scene design on this surface, so there is no plan validation to fail. The plan lives in your working context as a few sentences (thesis, order of movements, where sound leads); the draft is built directly with the clip tools, and a passage is repaired by editing its clips.
 
-**Recovery**: repair only the named field from the approved proposal, preserve the rest, and call `set_director_plan` again. Do not weaken the plan to chapter titles or invent evidence merely to satisfy validation.
+**Recovery**: if a tool call names a plan or Scene tool, it does not exist here — see `unknown tool` below.
 
-## `review_sequence: none of the requested sceneIds match a saved Director Plan Scene`
+## `inspect_timeline: none of the requested sceneIds match a saved plan Scene`
 
-**Meaning**: you passed `sceneIds` but the active output has no Director Plan, or those ids belong to another output / an older plan. `review_sequence` itself never requires a plan.
+**Meaning**: you passed `sceneIds` but the active output has no legacy plan, or those ids belong to another output / an older plan. `inspect_timeline` itself never requires a plan.
 
-**Recovery**: call it again with `sceneIds` omitted — without a plan it samples every visible clip's midpoint in time order; with a plan it reviews every Scene. Re-read `get_state` if you believed a plan existed.
+**Recovery**: call it again with `sceneIds` omitted — it then reviews every visible clip in time order (or pass explicit `frames[]` / a `fromFrame`–`toFrame` window with `maxFrames`). Re-read `get_state` if you believed a plan existed.
 
-## `instruction required` (from `compose_block_brief`)
+## `instruction required` (from `compose_component`)
 
 **Meaning**: every Component generation/rewrite needs a concrete communicative instruction; no implicit placeholder specification was supplied.
 
-**Recovery**: re-call with a concrete `instruction`. For new work also decide timing, placement, backdrop/protected zones and the approved `sceneId` before requesting the brief.
+**Recovery**: re-call with a concrete `instruction`. For new work also decide `atFrame`, `durationFrames`, `placement` and `backdrop` / protected zones before requesting the contract; for a rewrite pass the existing `clipId` (its timing and box are supplied).
 
 ## `unknown tool` / invalid-params JSON-RPC errors (-32602)
 
 **Meaning**: a tool name or argument shape that doesn't exist on this server.
 
-**Recovery**: re-check the tool list (`tools/list`); do not invent tools or parameters. Ids for blocks/shots/frames/presets must come from `get_state`, tool receipts, `list_frames`, or the caption catalog — a made-up id fails inside the tool instead.
+**Recovery**: re-check the tool list (`tools/list`); do not invent tools or parameters. Ids for clips/tracks/frames/presets must come from `get_state`, tool receipts, `manage_frame {action:"list"}`, or the caption catalog — a made-up id fails inside the tool instead. Timeline positions are integer frames, source positions seconds — a seconds value in a frame field is an invalid-params error, not a rounding issue.
 
 ## General rules
 
-- After ANY failed mutation, prefer `get_state` over memory before the next edit.
+- After ANY failed mutation, prefer `get_state` over memory before the next edit (a rejected call returns no delta to patch from).
 - Errors come back with `isError` and an `ok:false` JSON body, often with a `hint` field — read it; it states the recovery.
-- If the user rejects a change that DID apply, that's not an error path: use `undo` (one step per call).
+- If the user rejects a change that DID apply, that's not an error path: make the forward edit (set the value again, move the clip, or re-insert the removed source span from the delta's `removedSource`). Call `undo` (one step per call) only when the user explicitly asks to undo — the history is shared with their own edits.

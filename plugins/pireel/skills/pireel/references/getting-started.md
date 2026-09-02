@@ -52,10 +52,12 @@ No API keys. The endpoint answers unauthenticated calls with a `WWW-Authenticate
 
 Call `get_state` and interpret:
 
-- `<composition_state>` snapshot → the user's studio tab is open and bridged; fully connected.
-- `OFFLINE MODE` snapshot → connected; no tab, but data-level editing works against the user's latest cloud project.
+- A live state (canvas, playhead, tracks with clips, asset inventory, outputs list) → the user's studio tab is open and bridged; fully connected.
+- `OFFLINE MODE` state → connected; no tab, but data-level editing works against the user's latest cloud project.
 - `no cloud project` → connected; fresh account. Go to Step 4.
 - HTTP 401 after OAuth → re-run the login flow; the token may not have been granted.
+
+`get_state` is a once-per-session read: every later mutation returns a delta (touched clips, shifted rules, removed clips, caption changes) that you patch into your model. Re-read it only after a switch (`manage_project`), an undo, a rejected call, or when a receipt says the state is stale.
 
 ## Step 4 — REQUIRED final step: start the first task
 
@@ -66,9 +68,9 @@ Ask the user how to start, then do it:
 **A. From a local video file** (most common) — with the tab open from above. Two ways, both keep the video local (no upload):
 
 - **Primary — the helper**: `import_media` with NO args → `token` + `base_url` → run `node <helper> --base <base_url> --token <token> /path/to/video.mp4` (bundled at `<pireel-skill-dir>/scripts/import-media.mjs`, or `curl -fsSL <base_url>/import-media.mjs`; install `ffmpeg`/`ffprobe` yourself if missing). Use the returned `base_url` exactly so production connections never fall through to Preview. It streams the video into the open tab over the user's machine (not uploaded), transcribes, and registers a project in one shot. If it reports `studio_not_open`, redo the handoff and re-run.
-- **Fallback — inject it directly** (helper unavailable, and you drive the browser): start `tab.playwright.waitForEvent('filechooser')`, click `tab.playwright.locator('[data-pireel-video-trigger]')`, then pass the absolute path to the returned chooser's `setFiles(...)`. The studio loads it locally into its OPFS library and makes it the main video. Then call `read_script`; it returns a stored transcript or transcribes when missing.
+- **Fallback — inject it directly** (helper unavailable, and you drive the browser): start `tab.playwright.waitForEvent('filechooser')`, click `tab.playwright.locator('[data-pireel-video-trigger]')`, then pass the absolute path to the returned chooser's `setFiles(...)`. The studio loads it locally into its OPFS library and makes it the main video. Then call `get_transcript`; it returns a stored transcript or transcribes when missing.
 
-Then `get_state` and edit. See the `asset-import` skill for the full transfer matrix.
+Then `get_state` and edit (an empty timeline is not a blocker: place the library footage with `add_clips` role `primary`, then edit it). See the `asset-import` skill for the full transfer matrix.
 
 **B. From the browser**: the user opens `<BASE>`, creates a studio project and uploads a video there; the live bridge connects automatically.
 

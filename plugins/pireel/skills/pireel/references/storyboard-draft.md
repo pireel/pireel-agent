@@ -11,25 +11,28 @@ captions and sound share one argument, rhythm and visual system.
 
 The method below is **proportional**. A 40-second product clip with a clear brief needs a sentence of
 direction and then the edit; a 12-minute lesson with vague intent needs a proposal the user can
-approve. Nothing here requires a planning artifact before you may touch the timeline.
+approve. Nothing here requires a planning artifact before you may touch the timeline — and there is
+none to write: the plan lives in your working context as prose.
 
 ## Understand the material before designing
 
-Start with `get_state` and `get_timeline`. Inspect `list_assets` / `search_assets`, and read the spoken
-material with `read_script` only when its actual wording or timing matters — speechless footage is read
-through `get_timeline`, `inspect_media` and frame inspection instead. `read_script` reuses stored text and
-transcribes only when needed. Inspect real frames only where picture evidence is needed; do not infer
-what an unviewed clip contains.
+Start with `get_state` (once; it lists every track, clip and library asset). Inspect `search_assets`
+when the library alone cannot answer, and read the spoken material with `get_transcript` only when its
+actual wording or timing matters — speechless footage is read through `get_state`, `inspect_media` and
+`inspect_timeline` instead. `get_transcript` reuses stored text and transcribes only when needed
+(transcription charges). Inspect real frames only where picture evidence is needed; do not infer what
+an unviewed clip contains.
 
 Derive the likely solution progressively from the material. Resolve consequential uncertainty about:
 
 - the strongest truthful sequence and what footage actually supports it;
 - whether the canvas should stay source-led, split, picture-led or deliberately full-field;
 - the selected Frame or a coherent themeless visual language;
-- missing evidence, product actions, interface states, pickup shots or audio;
+- missing evidence, product actions, interface states, pickup footage or audio;
 - output count/ratio/duration when the request implies multiple deliverables.
 
 Do not turn this into a generic audience questionnaire. Ask only for decisions the source cannot answer.
+Over MCP there is no `ask_user` tool: ask in your own host's conversation and stop the turn.
 
 ## State the direction before building — at the scale the request deserves
 
@@ -43,50 +46,50 @@ Do not turn this into a generic audience questionnaire. Ask only for decisions t
   2. **Rhythm arc** — where pace, density, pressure, proof, release and holds change.
   3. **Video design system** — composition grammar, typography roles, color/material behavior, imagery
      treatment, motion character and sound hierarchy for the whole output.
-  4. **Scene progression** — meaningful picture changes, each with a viewer task, visual anchor,
+  4. **Movement progression** — meaningful picture changes, each with a viewer task, visual anchor,
      full-canvas treatment, motion/payoff/exit, sound plan and honest asset strategy.
   5. **Material sufficiency** — what is supported now and any exact missing source that changes quality.
 
-When a Frame is already selected, read it as professional art direction: its examples demonstrate
-transferable shape, material, image, type, color-role, spatial and motion principles, not Scene types,
-layouts or media choices. When none is selected and the visual direction is materially uncertain,
-recommend one or two evidence-based Frames plus themeless and wait — unless the user has told you not
-to ask, in which case pick the strongest and name it. The user's manual palette, layout, captions and
-explicit instructions remain authoritative.
+When a Frame is already selected, read it as professional art direction (`manage_frame {action:"read"}`):
+its examples demonstrate transferable shape, material, image, type, color-role, spatial and motion
+principles, not passage types, layouts or media choices. When none is selected and the visual direction
+is materially uncertain, recommend one or two evidence-based Frames (`manage_frame {action:"list"}`) plus
+themeless and wait — unless the user has told you not to ask, in which case pick the strongest and name
+it. The user's manual palette, layout, captions and explicit instructions remain authoritative.
 
-## Persisted planning is optional
+## The plan is working context, not a saved artifact
 
-`set_director_plan` and `set_scene_designs` save a durable whole-video plan (Semantic Scenes with one
-design system, then each Scene's open composition, choreography and handoff). Use them when:
+There is no persisted director plan or scene-design object, and no tool reads one back. Hold the plan
+as a few sentences you can keep in mind for the whole session: the thesis, the order of movements, and
+where sound leads. For a long piece, write it down for yourself in the proposal above; for a multi-session
+piece, restate it from the timeline (`get_state` plus `inspect_timeline`) when you resume — the built
+clips are the record. Split a movement when its visual anchor or viewing task changes, not by a fixed
+duration, and give real evidence wherever a passage asks the viewer to believe a claim. When several
+outputs must share one design system, attach the same Frame to each (`manage_frame {action:"attach"}`)
+and carry the sentence-level plan across `manage_project` output switches yourself.
 
-- the user or a selected Studio Skill explicitly asks for a saved plan;
-- the piece is long or will span several sessions, so Scene-scoped `review_sequence` / repair by
-  `sceneId` pays for the authoring cost;
-- several outputs must share one design system and you need a single source for it.
-
-Otherwise skip them and compile directly. A plan, when used, must be a real contract: exact edited-time
-intervals, one dominant `visualAnchor` and full-canvas `visualTreatment` per Scene, `motionPlan`,
-`soundPlan`, `assetStrategy`, an explicit `brollDecision`, and real evidence wherever a Scene asks the
-viewer to believe a claim. Split a Scene when its visual anchor or viewing task changes, not by a fixed
-duration. Existing projects may already carry a plan; read it with `read_director_plan {sceneIds}` /
-`read_scene_designs {sceneIds}` before continuing it, and pass `sceneId` into `compose_block_brief` and
-`insert_clips` only when such a plan exists.
+A passage is repaired by its clips: the receipt of every mutation is a delta (touched clips, shifted
+rules, removed clip ids, removed source spans), and the clip ids `inspect_timeline` reports on screen are
+the handles you edit with. There is no scene id to target.
 
 ## Compile the edit with the neutral timeline tools
 
-Use the batched tools to cut, place, move, resize, frame, crop, layer and mix real media: `split_shot`
-/ `cut_range` / `cut_narration` for the cut; `add_clips` / `insert_clips` / `move_clips` for media;
-`set_shot_framing` / `apply_layout` for the picture; `set_bgm` / `set_shot_audio` / `add_clips
-{role:"sfx"}` for sound (craft in `craft/audio-and-music.md`); `add_transition` only where a boundary means a
-change of time, place, chapter or mode; `set_captions` for subtitles. Let source people, products,
-interfaces and evidence remain primary when they carry the meaning. Do not add layers to meet a count:
-a clean source-led passage may be the strongest design.
+Use the batched tools to cut, place, move, resize, frame, crop, layer and mix real media: `split_clips`
+/ `ripple_delete_ranges` / `remove_words` for the cut (speech by the transcript, everything else by
+frames); `add_clips` / `insert_clips` / `move_clips` for media; `set_clip_framing` / `apply_layout` for
+the picture; `add_clips {role:"music"}` + `set_clip_properties {volumeDb, fades}` / `set_clip_properties
+{volumeDb, mute}` on footage / `add_clips {role:"sfx"}` for sound (craft in `craft/audio-and-music.md`);
+`add_transition` only where a boundary means a change of time, place, chapter or mode; `set_texts` for
+titles and labels; `set_captions` for subtitles. Timeline arguments are integer frames at the output fps
+from `get_state`; source and transcript positions are seconds; the tools convert. Let source people,
+products, interfaces and evidence remain primary when they carry the meaning. Do not add layers to meet
+a count: a clean source-led passage may be the strongest design.
 
-A Motion Graphic is one optional layer. Before generating one, decide its actual `atSec`,
-`durationSec`, canvas `placement`, real `backdrop` and protected face/product/caption zones. Then:
+A Motion Graphic is one optional layer. Before generating one, decide its actual `atFrame`,
+`durationFrames`, canvas `placement`, real `backdrop` and protected face/product/caption zones. Then:
 
 ```
-compose_block_brief → generate from its exact contract → apply_block with target unchanged
+compose_component → generate from its exact contract → apply_component with target unchanged
 ```
 
 This gives the component its actual box and design context before it is authored. Do not generate a
@@ -95,14 +98,15 @@ fades, and allow deliberate quiet passages.
 
 ## Review the viewing experience
 
-Run `review_sequence` after a complete pass. It works with or without a plan: with one it returns each
-Scene's entrance, development, payoff and exit frames plus deterministic structure checks; without one
-it samples every visible clip's midpoint in time order. Look at every attached image as one moving
-sequence, then review at normal playback speed and delivery size; a good midpoint thumbnail is not
-proof of a finished passage. Neither tool hears — confirm music levels, fades and B-roll sound from the
-timeline receipts and ask the user to play the result.
+Run `inspect_timeline` after a complete pass. With no arguments it samples every visible clip's midpoint
+in time order; with `{fromFrame, toFrame, maxFrames}` it samples one passage evenly, and `{frames:[…]}`
+shows the exact entrance, development, payoff and exit moments of a component you want to check. Look
+at every attached image as one moving sequence, then review at normal playback speed and delivery size
+(`preview {action:"play"}`); a good midpoint thumbnail is not proof of a finished passage. Nothing here
+hears — confirm music levels, fades and B-roll sound from `get_state` and the mutation deltas and ask
+the user to play the result.
 
 Repair blank or unloaded media, missing evidence, tiny/unreadable graphics, repeated card geometry,
-uncleared overlays, clipped animation, silent/muted voice, level mistakes and weak boundaries. Preserve
-unaffected passages, recheck repaired moments and their immediate handoffs, then summarize the finished
-experience rather than the number of tool calls.
+uncleared overlays, clipped animation, silent/muted voice, level mistakes and weak boundaries — by the
+clips involved. Preserve unaffected passages, recheck repaired moments and their immediate handoffs, then
+summarize the finished experience rather than the number of tool calls.
