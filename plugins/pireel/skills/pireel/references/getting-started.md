@@ -43,7 +43,7 @@ MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
 
 ## Step 2 — Authenticate (OAuth)
 
-No API keys. The endpoint answers unauthenticated calls with a `WWW-Authenticate` challenge; the MCP client discovers the OAuth flow from it automatically.
+OAuth is the default: the endpoint answers unauthenticated calls with a `WWW-Authenticate` challenge and the MCP client discovers the flow from it automatically. An account API key (`<BASE>/zh/settings`) is only the fallback for a host that cannot hold OAuth tokens — see `known-errors.md` → HTTP 401 before reaching for it.
 
 - **Codex**: `codex mcp login pireel` opens the browser sign-in; the user logs into their Pireel account and approves.
 - **Claude Code**: the client prompts on first use (or via `/mcp`) — follow the browser flow.
@@ -55,7 +55,7 @@ Call `get_state` and interpret:
 - `<composition_state>` snapshot → the user's studio tab is open and bridged; fully connected.
 - `OFFLINE MODE` snapshot → connected; no tab, but data-level editing works against the user's latest cloud project.
 - `no cloud project` → connected; fresh account. Go to Step 4.
-- HTTP 401 after OAuth → re-run the login flow; the token may not have been granted.
+- HTTP 401 after OAuth → re-run the login flow once; the token may not have been granted. If the browser confirmed the login and calls are STILL 401 (typical for Codex on Windows), do not loop on login — apply the credential-store repair in `known-errors.md` → HTTP 401.
 
 ## Step 4 — REQUIRED final step: start the first task
 

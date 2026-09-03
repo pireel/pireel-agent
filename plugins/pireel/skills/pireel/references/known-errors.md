@@ -49,6 +49,22 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 
 **Recovery**: for an MCP 401, re-run the OAuth login (`codex mcp login pireel`, or reconnect the Pireel server in Claude Code). For a helper 401, obtain one fresh token and retry the helper once. If the fresh token also returns 401, stop and report the environment error; do **not** switch to browser DOM injection, invent a direct-upload script, create carrier media, or install a local transcription stack.
 
+### Windows (Codex): the browser says "authentication complete" but every call is still 401
+
+**Meaning**: the login worked and Pireel issued a token, but the host never attaches it. Codex's Windows credential store fails to reload MCP OAuth tokens after login (openai/codex#28201), and the Desktop app can additionally block the loopback callback (openai/codex#26693). Retrying the login does not help — repair the host instead. You may edit `%USERPROFILE%\.codex\config.toml` yourself; after every config change the host must be **fully** restarted (tray icon too).
+
+1. Add at the TOP level of `config.toml` (outside any `[mcp_servers.*]` table): `mcp_oauth_credentials_store = "file"`. Then `codex mcp logout pireel` and `codex mcp login pireel` (or reconnect from the host's MCP settings). Tell the user the tokens now live in `%USERPROFILE%\.codex\.credentials.json`.
+2. Still 401 → switch this server to an account API key. The user creates one at `https://pireel.com/zh/settings` (API keys). Replace the server block with the key sent as a header and drop `oauth_resource`:
+
+   ```toml
+   [mcp_servers.pireel]
+   url = "https://pireel.com/api/studio/mcp"
+   http_headers = { Authorization = "Bearer pireel_…" }
+   ```
+
+   Prefer `http_headers` over `bearer_token_env_var` on desktop hosts: they often do not see shell environment variables (openai/codex#30125).
+3. The key grants the whole account — never paste it into chat or logs; the user revokes it from the same settings page.
+
 ## `server_misconfigured`
 
 **Meaning**: the connected Pireel environment is missing a required server-side binding or secret. For media transcription this commonly occurs before ASR, while preparing the temporary compressed-audio upload.
