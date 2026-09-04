@@ -5,14 +5,14 @@ description: Core mental model and tool routing for editing videos in Pireel Stu
 
 # Pireel Studio basics
 
-Pireel Studio (https://pireel.com) is a multi-source, multi-track video editor for speech-led edits, lessons, product stories, ads and montages. Through the `pireel` MCP server your tools edit the composition **live in an open studio browser tab**: the timeline updates on screen as you work. Call `create_browser_handoff` and open the returned `url` with your own built-in/embedded browser tool. On Codex, use the in-app Browser runtime first; never spend the single-use ticket through OS `open`, the user's default browser, or connected Chrome proactively. Keep the tab visible and open. Only an explicit `local loopback is unreachable from this browser` result permits one retry in a controllable connected browser that shares the agent host's loopback. The handoff expires in ~60s; open it immediately and never print it to the user.
+Pireel Studio (https://pireel.com) is a multi-source, multi-track video editor for speech-led edits, lessons, product stories, ads and montages. Through the `pireel` MCP server your tools edit the composition **live in an open studio browser tab**: the timeline updates on screen as you work. Call `create_browser_handoff` and open the returned `url` with your own built-in/embedded browser tool. On Codex, use the in-app Browser runtime first; never spend the single-use ticket through OS `open`, the user's default browser, or connected Chrome proactively. Keep the tab visible and open. The handoff expires in ~60s; open it immediately and never print it to the user.
 
 **Keep the editor in YOUR browser, visible, and open — get this right the first time.** Three failure modes that make you look broken to the user:
-1. **Wrong surface.** Opening the handoff URL means opening it in your own built-in/embedded browser. On Codex, use the in-app Browser runtime first. Never route it to connected Chrome or an uncontrolled default browser unless the in-app helper attempt has already returned the explicit loopback error.
+1. **Wrong surface.** Opening the handoff URL means opening it in your own built-in/embedded browser. On Codex, use the in-app Browser runtime first. Never route it to connected Chrome or an uncontrolled default browser.
 2. **Not visible.** After opening, make your browser **visible** so the user watches every edit land — use your browser tool's visibility control.
 3. **Auto-closed at turn end.** Many embedded browsers clean up tabs when your turn finishes — that yanks the editor out from under the user right after you opened it. **Mark the Pireel tab to persist** using your tool's keep-tab / finalize-with-keep control. Never close-and-reopen the Pireel tab between edits; open it once, keep it.
 
-These are your host's own browser-runtime controls, not Pireel MCP tools — use whatever your tool exposes. **On Codex specifically:** drive the in-app browser through the official Browser runtime / Node REPL, navigate with the selected tab's `goto`, make it visible, and follow the runtime's documented keep/finalize behavior. Never use OS `open` or select connected Chrome preemptively. A controllable connected browser is only the one-retry fallback after the exact loopback-unreachable error.
+These are your host's own browser-runtime controls, not Pireel MCP tools — use whatever your tool exposes. **On Codex specifically:** drive the in-app browser through the official Browser runtime / Node REPL, navigate with the selected tab's `goto`, make it visible, and follow the runtime's documented keep/finalize behavior. Never use OS `open` or select connected Chrome preemptively.
 
 The MCP endpoint is `https://pireel.com/api/studio/mcp`. Auth is OAuth — the agent's `mcp login` / first-use flow opens the browser; there are no API keys. On HTTP 401, re-run the OAuth login for `pireel`.
 
@@ -87,7 +87,7 @@ Tools are grouped the way the server lists them. Timeline arguments are frames; 
 | Bring LOCAL files into the open tab | `import_media` with no arguments → run the helper from the `asset-import` skill |
 | Label, tag or record BPM on assets | `organize_media {items}` |
 | Icons for component markup | `get_icons {names, kind:"icon" \| "brand"}` |
-| Open the live editor (your browser, pre-signed-in) | `create_browser_handoff` → built-in/embedded browser first; connected browser only after the explicit loopback-unreachable error |
+| Open the live editor (your browser, pre-signed-in) | `create_browser_handoff` → built-in/embedded browser |
 
 ### Clips and tracks
 
@@ -167,7 +167,7 @@ Tools are grouped the way the server lists them. Timeline arguments are frames; 
 
 ## Local media import
 
-When the user points at LOCAL video, image or audio paths, load the `asset-import` skill — `import_media` with no arguments returns a short-lived import token and the exact `base_url`; its helper streams the files straight into the OPEN studio tab over the user's machine and keeps the original bytes in device-local OPFS (a tab must be open first). The helper returns registrations you place with `add_clips`. Main-video import can optionally send only a small extracted audio copy through Pireel's disclosed ASR path. Never tell the user to upload local source media to the cloud as the first answer.
+When the user points at LOCAL video, image or audio paths, load the `asset-import` skill — `import_media` with no arguments returns a short-lived import token and the exact `base_url`; its helper uploads the files to the user's Pireel cloud media store (content-addressed, duplicates are instant — no studio tab required) and registers them into the active project: the main video as the narrative source, everything else as library assets you place with `add_clips` / `insert_clips` by assetId. Main-video import can optionally send a small extracted audio copy through Pireel's disclosed ASR path. Never tell the user to upload manually in the browser as the first answer.
 
 ## Seeing and offline mode
 
@@ -184,7 +184,7 @@ Over MCP there is no `ask_user` tool (it exists only in Studio Chat): ask in you
 - Before a consequential complete *creative* build with no Frame, when the visual direction is genuinely unresolved, inspect the material and recommend 1–2 fitting Frames (`manage_frame {action:"list"}`) plus themeless, then wait for the choice. A Frame is never required to start cutting, placing, framing or mixing; never hold up a small local edit or a speech cleanup on it. If the user said to proceed without asking, pick the strongest direction, name it in one sentence, and continue.
 - Paid generation (image, video, audio, speech, voice clone/design, hosted component fallback) — propose prompt, model, duration and aspect, and wait for confirmation.
 - PROJECTS (no browser): offline tools act on your ACTIVE project = the most-recently-touched one. `manage_project {scope:"project", action:"list"}` shows all (newest first = active); `{scope:"project", action:"switch", id}` makes a different one active and returns its state; `{scope:"project", action:"create", title?}` starts a fresh empty one (immediately active); `{scope:"project", action:"rename", id, title}` retitles. If `get_state` reports "no cloud project", create one with `manage_project` (or `import_media`) — don't send the user to a browser just to create one.
-- `studio_not_open` / `studio_tab_closed` — first open your own built-in/embedded browser tab. Ask the user only when no embedded browser exists. For local import, switch to a controllable connected browser only after the embedded attempt explicitly reports the loopback-unreachable error.
+- `studio_not_open` / `studio_tab_closed` — first open your own built-in/embedded browser tab. Ask the user only when no embedded browser exists.
 
 ## Talking to the user
 
