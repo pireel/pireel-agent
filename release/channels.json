@@ -4,7 +4,7 @@
     "pluginRoot": "plugins/pireel",
     "marketplace": "pireel-marketplace",
     "pluginVersion": "0.7.2",
-    "workflowVersion": "2026-09-04.4",
+    "workflowVersion": "2026-09-04.5",
     "mcpServer": "pireel",
     "baseUrl": "https://pireel.com"
   },
