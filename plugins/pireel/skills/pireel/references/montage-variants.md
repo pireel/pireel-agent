@@ -76,7 +76,7 @@ For local B-roll, follow `asset-import.md`: the helper streams each file over lo
 Inspect representative opening, proof, and ending moments in every output. Use `inspect_timeline` with no frames for the
 complete pilot and each finished output; use `inspect_timeline {frames:[…]}` at the exact frames only for one small local change.
 Nothing there hears audio — read levels and fades from `get_state`. Patch your model of the active output from each
-mutation's delta; re-read `get_state` only after a switch or a rejected call. Confirm:
+mutation's delta; re-read `get_state` only after a switch or an undo — a rejected call changed nothing. Confirm:
 
 - the opening is clear and supported;
 - product identity and important actions are legible at phone size;

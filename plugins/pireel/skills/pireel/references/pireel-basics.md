@@ -81,9 +81,9 @@ Tools are grouped the way the server lists them. Timeline arguments are frames; 
 | Request | Tools |
 | --- | --- |
 | Projects and outputs (list / switch / create / rename / duplicate / delete) | `manage_project {scope:"project" \| "output", action, id?, title?}` — a switch returns the new `get_state`; ids are output-local |
-| Find a described reusable asset (name/category/mood/use case) | `search_assets {scope:"mine" \| "cloud" \| "official" \| "all" \| "stock", query?, kind?}` (works with the tab closed; use returned locators, never invent a URL) |
+| Find a described reusable asset (name/category/mood/use case) | `search_assets {scope:"mine" \| "cloud" \| "official" \| "all" \| "stock", query?, kind?}` (works with the tab closed). Returned ids go straight to `add_clips` / `insert_clips` — they are registered on placement; only `stock` results need `register_media` with the exact import payload. Never invent a URL |
 | What media has the user added to this project? | `get_state` asset inventory, or `search_assets {scope:"mine"}` with no query (works with the tab closed) |
-| Use generated, remote or stock media | `register_media {assets:[…returned fields unchanged…]}` or `{stock: <exact import payload>}` → `add_clips` / `insert_clips` by asset id |
+| Use generated or stock media | `register_media {assets:[…returned fields unchanged…]}` or `{stock: <exact import payload>}` → `add_clips` / `insert_clips` by asset id (official and cloud search results skip this step) |
 | Bring LOCAL files into the open tab | `import_media` with no arguments → run the helper from the `asset-import` skill |
 | Label, tag or record BPM on assets | `organize_media {items}` |
 | Icons for component markup | `get_icons {names, kind:"icon" \| "brand"}` |
@@ -110,8 +110,9 @@ Tools are grouped the way the server lists them. Timeline arguments are frames; 
 | Slow-mo / speed-up a clip | `set_clip_properties {items:[{clipId, speed}]}` (0.25–4; the spine ripples by default) |
 | Clip sound — quiet or mute a clip's own audio (e.g. B-roll under narration) | `set_clip_properties {items:[{clipId, volumeDb (−60…+20, 0 = source), mute, fades:{in, out} (frames)}]}` |
 | Swap a clip's media, keep its geometry | `set_clip_properties {items:[{clipId, assetId}]}` |
-| Background music: add / level / trim / fade / remove | `register_media` (generated or remote only; library assets are already registered) → `add_clips {clips:[{assetId, role:"music", startFrame, source?}]}` → `set_clip_properties {volumeDb, fades}`; remove with `remove_clips` — craft rules in `craft/audio-and-music.md` |
+| Background music: add / level / trim / fade / remove | `search_assets {scope:"official", kind:"audio", query}` → `add_clips {clips:[{assetId, role:"music", startFrame, source?}]}` → `set_clip_properties {volumeDb, fades}`; remove with `remove_clips` — craft rules in `craft/audio-and-music.md` |
 | Place narration / music / SFX as typed audio clips | `add_clips {role:"narration" \| "music" \| "sfx"}` (omit `trackId` to reuse or create the lane) |
+| Build a montage picture track from your review picks | `inspect_media {mode:"editorial", ids, brief, compareOpenings:true}` → `assemble_from_review {clips:[{assetId, source:[inSec,outSec]}], targetDurationFrames?}` — places your ordered picks exactly as given; the receipt reports coverage, `notes` where a pick disagrees with the review, and `remaining` accepted ranges when short (pick more and call again; nothing is chosen for you). Needs the open tab |
 | Transition at a cut between two story-spine clips | `add_transition {atFrame, effect, durationFrames?, direction?}` (`effect:"none"` removes) |
 | Create / reorder / mute / remove a track | `manage_tracks {action, trackId?, type?, role?, order?, syncLocked?}` |
 | Link clips, or sync camera + external audio by a clap | `manage_clip_links {action:"link" \| "unlink" \| "sync", …}` |
@@ -171,7 +172,7 @@ When the user points at LOCAL video, image or audio paths, load the `asset-impor
 ## Seeing and offline mode
 
 - `inspect_timeline {frames:[…]}` renders exact frames of the composited output (footage + framing + overlays + text + captions) as images — your eyes. Each image carries its frame number and the receipt lists the clip ids visible on screen, so what you see maps back to what you can edit. Verify visual work after `apply_component`, `set_texts`, caption or framing changes, then fix what looks wrong. Needs the studio tab open.
-- `inspect_timeline` with `{fromFrame, toFrame, maxFrames}` or with no arguments reviews the timeline as a sequence: the midpoint of every visible clip in time order. Use it after a complete edit or any multi-clip batch; inspect every attached image as a sequence rather than certifying one attractive midpoint. Nothing here can *hear* — verify sound decisions from `get_state` and mutation deltas (levels, fades, mutes) and invite the user to play the result.
+- `inspect_timeline` with `{fromFrame, toFrame, maxFrames}` or with no arguments reviews the timeline as a sequence: the midpoint of every visible clip in time order. Use it once before reporting done, or when a visual could be wrong (a placement, an overlap, a component's box, caption legibility) — never after every change; inspect every attached image as a sequence rather than certifying one attractive midpoint. Nothing here can *hear* — verify sound decisions from `get_state` and mutation deltas (levels, fades, mutes) and invite the user to play the result.
 - When the tab is closed, data-level tools (timeline edits, cuts, component edits, text, captions, BYO compose/apply) run in OFFLINE MODE against the user's most recently updated cloud project (results carry `offline: true`). Offline is a fallback, not the default: before consequential editing, open the editor so the user can watch. Media-byte analysis, rendered `inspect_timeline`, local-file materialization and browser export need the live tab.
 
 ## When to ask the user instead of acting

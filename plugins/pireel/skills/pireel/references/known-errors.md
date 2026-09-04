@@ -87,6 +87,6 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 
 ## General rules
 
-- After ANY failed mutation, prefer `get_state` over memory before the next edit (a rejected call returns no delta to patch from).
+- A failed mutation changed nothing: the state you already hold is still current. Fix the input the error names and retry; do not re-read `get_state` for a rejection.
 - Errors come back with `isError` and an `ok:false` JSON body, often with a `hint` field — read it; it states the recovery.
 - If the user rejects a change that DID apply, that's not an error path: make the forward edit (set the value again, move the clip, or re-insert the removed source span from the delta's `removedSource`). Call `undo` (one step per call) only when the user explicitly asks to undo — the history is shared with their own edits.
