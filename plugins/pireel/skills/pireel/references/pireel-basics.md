@@ -31,6 +31,8 @@ The MCP endpoint is `https://pireel.com/api/studio/mcp`. Auth is OAuth — the a
 
 `remove_words` is the bridge for spoken footage: pass it transcript (source-second) `ranges` or `wordIds` and it converts to the timeline itself, cuts the footage, re-lays overlays and captions.
 
+`mask_words` is the other spoken-word tool: it keeps the words in the cut and replaces them instead — `audio: "beep" | "mute"` swaps their sound for a censor tone or silence, `caption: "**"` (any string) swaps their caption text; `"original"` restores either side. Use it when the user wants words bleeped or starred out (platform-sensitive terms, names, prices) rather than cut. Pireel keeps no word list — which words qualify is the user's call, so ask or follow their list; never bleep on your own judgment.
+
 Clips inserted from a **different source file** have their own source clock: their `source` seconds belong to that file, not the primary footage's transcript. `get_transcript {clipId}` reads that clip's speech and `remove_words` cuts it by the same rules; non-speech spans inside such clips are cut with `ripple_delete_ranges` (timeline frames) or dropped with `remove_clips`.
 
 **Footage without speech** (B-roll, product footage, screen recordings, music-led montage) needs no transcript at all: `get_state` gives frame positions, and the clip tools above shape it by time, picture and sound. `get_transcript` reporting no coverage is information, not an error. Do not call it on speechless footage just to "start"; do not ask the user for a script before editing it.
