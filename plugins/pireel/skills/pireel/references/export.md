@@ -18,22 +18,22 @@ node scripts/export-sink.mjs --out ~/Videos &
 # first stdout line: {"sink_url":"http://127.0.0.1:PORT/…","out_dir":…}
 ```
 
-2. Call `export {action:"start"}` with that URL plus the confirmed specs: `{ "action": "start", "resolution": 1080, "sink_url": "http://127.0.0.1:PORT/…" }` (the sink does not skip the needs_options handshake — confirm specs with the user first).
+2. Call `export {action:"start"}` with that URL: `{ "action": "start", "sink_url": "http://127.0.0.1:PORT/…" }` (add resolution / fps / format only when the user named them).
 3. Poll `export {action:"status"}` as usual. On done it reports `saved_via: local sink`; the sink process prints `{"saved": "/abs/path", …}` and exits — that's the deliverable's absolute path.
 
 The sink is loopback-only, single-use, and needs no token (it never talks to the Pireel API). Bytes stay on this machine. If the sink PUT fails, the tab falls back to the browser download and `export {action:"status"}` carries `sink_error` — restart a fresh sink and re-export (unchanged content re-delivers instantly from cache).
 
 ## Flow
 
-1. The specs are the user's choice — `export` is a two-step handshake. A first `export {action:"start"}` call without explicit specs does NOT start the export; it returns `status: "needs_options"` with recommendations tuned to the source video and common platforms (Xiaohongshu / Douyin·TikTok / YouTube / source quality) in `data.options`. Present them and ask the user which to use in YOUR interface (over MCP there is no in-tool question; ask in your own host).
+1. The default export needs no configuration: `export {action:"start"}` renders with adaptive settings derived from the source quality and the current canvas ratio (typically 1080p · 30fps · MP4). Do not ask the user to choose resolution, fps or format — start the export.
 
-2. Call again with the chosen specs as explicit overrides to start:
+2. Pass specs only when the user named them in their request, as explicit overrides:
 
 ```json
 { "action": "start", "resolution": 1080, "fps": 30, "format": "mp4" }
 ```
 
-   Resolution is output short-side pixels: 2160 (4K) / 1440 (2K) / 1080 / 720 / 540. FPS: 24 / 30 / 60. Format: mp4 / webm / mov. `resolution` / `fps` / `format` are explicit user overrides only — the default is adaptive source-quality settings. If the user already named the specs in their request, you may skip straight to this call.
+   Resolution is output short-side pixels: 2160 (4K) / 1440 (2K) / 1080 / 720 / 540. FPS: 24 / 30 / 60. Format: mp4 / webm / mov.
 
 3. Rendering is roughly realtime — a 3-minute video takes about 3 minutes. Poll `export {action:"status"}` every ~15s; it returns `{status, progress}` (`running | done | idle`) while running.
 
@@ -44,6 +44,10 @@ The sink is loopback-only, single-use, and needs no token (it never talks to the
    - Confirm the absolute path to the user; show the video inline when the harness supports it.
 
 4. Unchanged content re-exports instantly (the tab caches the last render for the same composition + options).
+
+## Several outputs
+
+A project can hold several outputs (versions); `get_state` lists them. Export runs one at a time and only renders the active output, so deliver a set in a loop: `manage_project {action:"switch_output", …}` → `export {action:"start"}` → poll `export {action:"status"}` until `done` (and, with a sink, until the sink process prints the saved path) → next output. Switching outputs while an export is running is refused — wait for `done` first. With a sink, start a fresh sink for each output (it delivers exactly one file). When the whole set is done, list every saved path once.
 
 ## Preconditions & fallbacks
 
