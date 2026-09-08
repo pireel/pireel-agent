@@ -1,0 +1,28 @@
+{
+  "name": "pireel",
+  "version": "0.7.2",
+  "description": "Edit multi-source videos and create finished cuts in Pireel Studio from your AI agent.",
+  "author": {
+    "name": "Pireel",
+    "url": "https://pireel.com"
+  },
+  "homepage": "https://pireel.com",
+  "repository": "https://github.com/pireel/pireel-agent",
+  "license": "Apache-2.0",
+  "keywords": [
+    "pireel",
+    "video",
+    "video-editing",
+    "talking-head",
+    "shorts",
+    "captions",
+    "subtitles",
+    "transcription",
+    "storyboard",
+    "motion-graphics",
+    "claude-code",
+    "mcp"
+  ],
+  "mcpServers": "./.mcp.json",
+  "skills": "./skills/"
+}

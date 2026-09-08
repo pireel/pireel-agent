@@ -1,0 +1,38 @@
+{
+  "name": "pireel-marketplace",
+  "owner": {
+    "name": "Pireel",
+    "url": "https://pireel.com"
+  },
+  "metadata": {
+    "description": "Pireel Studio plugin for Claude Code"
+  },
+  "plugins": [
+    {
+      "name": "pireel",
+      "source": "./plugins/pireel",
+      "description": "Edit multi-source videos and create finished cuts in Pireel Studio from Claude Code.",
+      "category": "design",
+      "homepage": "https://pireel.com",
+      "author": {
+        "name": "Pireel",
+        "url": "https://pireel.com"
+      },
+      "license": "Apache-2.0",
+      "keywords": [
+        "pireel",
+        "video",
+        "video-editing",
+        "talking-head",
+        "shorts",
+        "captions",
+        "subtitles",
+        "transcription",
+        "storyboard",
+        "motion-graphics",
+        "claude-code",
+        "mcp"
+      ]
+    }
+  ]
+}

@@ -11,9 +11,14 @@ different versions for different platforms.
 
 ## Install as a Plugin
 
+The Plugin bundles the Pireel workflow and authenticated MCP connection. The same
+`plugins/pireel` bundle ships a Codex manifest and a Claude Code manifest, so both
+hosts install the identical workflow and `pireel` MCP server.
+
+### Codex
+
 In the Codex desktop app, open **Plugins**, install **Pireel Studio** when it is
-available in your plugin directory, then start a new chat. The Plugin bundles the
-Pireel workflow and authenticated MCP connection.
+available in your plugin directory, then start a new chat.
 
 For repository-marketplace testing in Codex CLI:
 
@@ -35,6 +40,22 @@ can coexist with a production `pireel` connection without silently routing work
 to the wrong environment. Start a new chat after installing or updating so the
 host loads the new Plugin and MCP configuration.
 
+### Claude Code
+
+Add this repository as a marketplace, install the Plugin, then start a new session
+so Claude Code loads the bundled Skill and MCP server:
+
+```bash
+claude plugin marketplace add pireel/pireel-agent
+claude plugin install pireel@pireel-marketplace
+```
+
+Run `/mcp` inside Claude Code to complete the OAuth sign-in for the `pireel`
+server. If you previously connected with `claude mcp add` or `npx skills add`,
+verify the Plugin connection first (`get_state` returns a snapshot), then remove
+the manual `pireel` MCP entry and the standalone Skill so only one copy stays
+active.
+
 Then tell your agent:
 
 > Set up Pireel and help me edit my first video.
@@ -52,9 +73,10 @@ npx skills add pireel/pireel-agent
 The standalone Skill uses the same workflow but registers the Pireel MCP server
 through the host's own MCP configuration.
 
-### Claude Code
+### Claude Code without Plugins
 
-You can also connect Claude Code directly:
+Prefer the Claude Code Plugin above. If Plugins are unavailable in your
+environment, you can still connect the MCP server directly:
 
 ```bash
 claude mcp add --transport http pireel https://pireel.com/api/studio/mcp
@@ -114,7 +136,8 @@ node scripts/release-channel.mjs production \
 ```
 
 The script refuses the wrong branch and Preview/stable SemVer mixups, then synchronizes the
-channel manifest, Plugin manifest, and bundled Skill baseline. CI runs the matching `--check`
+channel manifest, both Plugin manifests (`.codex-plugin/plugin.json` and
+`.claude-plugin/plugin.json`), and bundled Skill baseline. CI runs the matching `--check`
 command and separately verifies endpoint isolation.
 
 ## Usage and credits
