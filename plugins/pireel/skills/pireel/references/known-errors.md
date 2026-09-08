@@ -11,7 +11,7 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 
 **Meaning**: no studio tab is connected to the bridge. The user does not have their Pireel studio project open in a browser, or the tab hasn't finished connecting.
 
-**Recovery**: data-level tools (timeline edits, cuts, component edits, captions, BYO compose/apply) can fall back to OFFLINE MODE against the active cloud project. But offline is a fallback, not the default flow: before consequential editing, open the editor through `create_browser_handoff` in your own visible embedded browser. Media-byte analysis, rendered capture/review, local-file materialization and browser export require the live tab. Never blind-retry—the answer cannot change until a tab connects.
+**Recovery**: data-level tools (timeline edits, cuts, component edits, captions, BYO compose/apply) can fall back to OFFLINE MODE against the active cloud project. But offline is a fallback, not the default flow: before consequential editing, open the editor through `create_browser_handoff` in your own visible built-in/embedded browser (on Codex, the in-app Browser runtime), or ask the user to open the project. Media-byte analysis, rendered capture/review, local-file materialization and browser export require the live tab. Never blind-retry—the answer cannot change until a tab connects.
 
 ## `studio_tab_closed`
 
@@ -34,18 +34,18 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 
 **Recovery**: nothing to do — font fetches now fall back through Pireel's own same-origin proxy (the server fetches Google Fonts for the browser), so fonts render properly even in restricted browsers; if even the proxy is unreachable (offline / self-hosted shell with no backend), the frame/export still renders with **system fallback fonts** instead of failing. The video, timeline, cuts and layout are unaffected (all local). If you still see `Failed to fetch` from `inspect_timeline`, the user's tab is on an older build — a refresh picks up the fix.
 
-## Local helper — `local loopback is unreachable from this browser`
+## Local helper — `upload failed: HTTP …` / `file_too_large`
 
-**Meaning**: MCP authentication and the Studio bridge are connected, but the browser hosting Studio cannot reach the agent host's throwaway `127.0.0.1` file server. Some embedded/in-app browser sandboxes isolate loopback; this is different from an API, R2, or ASR failure.
+**Meaning**: the helper reached Pireel but the presigned upload of the file bytes failed (network/proxy interruption) or the file exceeds the single-file limit (2 GB video/audio, 50 MB image).
 
-**Recovery**: only after this exact error, keep the same project and open one fresh `create_browser_handoff` in a controllable connected browser that shares the host network. Close/release the isolated in-app Studio tab, get one fresh import token, and retry the helper once. Do not choose the connected browser before the built-in/embedded browser attempt fails. Do not upload the original to cloud storage, drive hidden file inputs, or invent another transfer path.
+**Recovery**: re-run the helper once for a transient failure — uploads are content-addressed, so bytes that already arrived are not sent again. For an over-limit file, ask the user (with consent) to trim/transcode it locally with ffmpeg first. Do not drive hidden file inputs or invent another transfer path.
 
 ## HTTP 401
 
 **Meaning** depends on where it appeared:
 
 - An MCP tool call returning 401 means the OAuth session is missing or expired. This is transport-level — no tool ran.
-- The local import helper printing `local ... register failed: HTTP 401` means its short-lived import token was rejected by the connected environment. Re-calling `import_media` once distinguishes an expired token from an environment/access-gate defect.
+- The local import helper printing `upload rejected` / `register failed: HTTP 401` means its short-lived import token was rejected by the connected environment. Re-calling `import_media` once distinguishes an expired token from an environment/access-gate defect.
 
 **Recovery**: for an MCP 401, re-run the OAuth login (`codex mcp login pireel`, or reconnect the Pireel server in Claude Code). For a helper 401, obtain one fresh token and retry the helper once. If the fresh token also returns 401, stop and report the environment error; do **not** switch to browser DOM injection, invent a direct-upload script, create carrier media, or install a local transcription stack.
 
