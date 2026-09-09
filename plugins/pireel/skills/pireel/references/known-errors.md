@@ -61,6 +61,8 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 
 **Recovery**: the failure receipt returns a `clipId` (the id the component clip WILL have). Fix ONLY the listed issues in your generated text, **scope every CSS selector under `#<that clipId>`**, and call `apply_component` again passing that same `clipId` back verbatim (plus the same `atFrame`, `durationFrames` and `placement`). Reusing the id keeps the scope target stable across retries — for a brand-new component, do NOT omit `clipId` on the retry or a fresh id is minted and the scope never matches. Do not regenerate from scratch or change unrelated parts. If issues persist after 2–3 targeted fixes, re-read the `compose_component` contract; last resort, `apply_component {generate:true, instruction}` (charges Pireel credits — say so).
 
+A rejection for `<script>`, an external library, canvas/WebGL, an iframe or embedded video is a boundary, not a bug: the runtime is closed and no retry can pass it. Rebuild the visual in markup, CSS and SVG, or — when the idea truly needs a library — render it outside Studio to a transparent WebM and place it as a boxed B-roll clip (`references/compose-blocks.md`, "Beyond the runtime").
+
 ## Persisted plan tools
 
 **Meaning**: there is no saved Director Plan or Scene design on this surface, so there is no plan validation to fail. The plan lives in your working context as a few sentences (thesis, order of movements, where sound leads); the draft is built directly with the clip tools, and a passage is repaired by editing its clips.
