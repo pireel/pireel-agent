@@ -1,6 +1,6 @@
 ---
 name: asset-import
-description: Use when the user points at a LOCAL video, B-roll, image or audio file (a path like /Users/..., C:\..., or a chat attachment materialized as a file) that should be used in Pireel Studio. Covers streaming local media straight into the OPEN Studio tab over the user's machine (no cloud upload), registering it in device-local OPFS, optional metadata probing and transcription via ffmpeg/ffprobe, and when the studio tab must be open.
+description: Use when the user points at a LOCAL video, B-roll, image or audio file (a path like /Users/..., C:\..., or a chat attachment materialized as a file) that should be used in Pireel Studio. Covers uploading local media into the user's Pireel cloud media store with the bundled helper, registering it into the active project, optional metadata probing and transcription via ffmpeg/ffprobe.
 ---
 
 # Asset Import — local media into Pireel
@@ -13,19 +13,19 @@ This is the authoritative statement — tool descriptions and other references m
 
 | Asset | Transfer |
 |---|---|
-| **Main video** | **localhost → the OPEN Studio tab, over the user's machine — NOT uploaded to the cloud** (fast even for big files) |
-| Transcription audio | a small AAC is uploaded to the cloud (Pireel's transcription needs a URL it can fetch) |
-| **B-roll (`--broll`)** | **localhost → the OPEN Studio tab → device-local OPFS; the helper's registration resolves its sig locally and `add_clips` / `insert_clips` place it — NOT uploaded to R2** |
-| **Images** | **localhost → the OPEN Studio tab → device-local OPFS; project stores only a local locator — NOT uploaded to R2** |
-| **Audio (narration/music/SFX)** | **localhost → the OPEN Studio tab → device-local OPFS; `register_media` + `add_clips` place it on the matching typed audio lane — NOT uploaded to R2** |
+| **Main video** | uploaded to the user's Pireel cloud media store (content-addressed: the same bytes are one object however they enter, a duplicate upload is instant) and registered as the project's narrative source |
+| Transcription audio | a small AAC is uploaded for transcription (only when ffmpeg is available and `--no-transcribe` is absent) |
+| **B-roll (`--broll`)** | uploaded to the cloud media store, registered as a project **library asset**; `add_clips` / `insert_clips` place it by `assetId` |
+| **Images** | uploaded to the cloud media store, registered as a project library asset |
+| **Audio (narration/music/SFX)** | uploaded to the cloud media store, registered as a project library asset; `add_clips` places it on the matching typed audio lane |
 
-**Because user-local media streams straight into the browser, a Studio tab MUST be open before you import it.** If none is, the helper exits with `studio_not_open` — open one (call `create_browser_handoff` and open the URL in your own in-app browser, or ask the user to open the project) and re-run the helper. There is no cloud fallback for user-local media.
+No studio tab needs to be open. If one is open, it picks the new assets up from the project sync; otherwise the assets are there when the project is next opened, and offline tools (`get_state`, `add_clips`, `insert_clips`) can already see and place them.
 
-## Two ways in (both keep the video local)
+## Two ways in
 
-**A. The helper — PRIMARY.** Runs a throwaway localhost server and hands the bytes to the open tab via `register-local`; the tab fetches them over loopback. Start in the agent's own built-in/embedded browser — on Codex, that means the in-app Browser runtime, not connected Chrome. Do not assume loopback is isolated before trying it. The helper itself needs no browser-driving ability from you: one command imports, probes metadata, transcribes, and registers the project. If the attempt explicitly returns `local loopback is unreachable from this browser`, then use the conditional connected-browser recovery below. Details follow.
+**A. The helper — PRIMARY.** One command fingerprints, uploads, probes metadata, transcribes and registers. It needs no browser-driving ability from you.
 
-**B. Direct injection (fallback — when the helper can't run, and you drive the browser yourself).** No import token, no helper. With an empty studio output open, use the browser's file-chooser bridge from the stable canvas trigger:
+**B. Direct injection (fallback — when the helper can't run, and you drive the browser yourself).** No import token, no helper. Open the handoff in your own built-in/embedded browser (on Codex, the in-app Browser runtime), and with an empty studio output open use the browser's file-chooser bridge from the stable canvas trigger:
 
 ```js
 const chooserPromise = tab.playwright.waitForEvent('filechooser', { timeoutMs: 10000 });
@@ -34,31 +34,19 @@ const chooser = await chooserPromise;
 await chooser.setFiles('/absolute/path/to/video.mp4');
 ```
 
-The studio reads the file locally into its OPFS library and makes it the main video — nothing is uploaded. Then call the `get_transcript` MCP tool; it returns a stored transcript or transcribes in the tab when missing (note this route skips the helper's ffprobe/transcript step). Do not call `locator.setInputFiles`: the supported browser API exposes file selection through the chooser object.
+The studio imports the file the same way a user drop does (device cache + background cloud upload) and makes it the main video. Then call the `get_transcript` MCP tool; it returns a stored transcript or transcribes in the tab when missing (this route skips the helper's ffprobe/transcript step). Do not call `locator.setInputFiles`: the supported browser API exposes file selection through the chooser object.
 
-Both routes converge after the bytes enter the tab: the same local import session classifies the
-media, persists it to OPFS, and writes the same metadata-only `localAssets` project index used by
-the Studio picker. Skill imports therefore appear in the same local asset list and participate in
-the same deletion sync and cross-browser “restore access” guidance; only the source adapter differs.
-
-Direct injection is a capability fallback, not an authentication or server-error workaround. If
-the helper reaches Pireel but returns HTTP 401 with a freshly issued import token, or reports
-`server_misconfigured`, stop and surface that infrastructure error. Do not drive hidden file inputs,
-write a custom upload client, create a carrier video, or install a local ASR stack to route around it.
-If it reports `local loopback is unreachable from this browser`, keep the same project,
-open a fresh handoff in one controllable connected browser that shares the host loopback, close/release
-the isolated in-app tab, and retry the helper once with a fresh token. This is an error-triggered
-fallback, never the initial browser choice.
+Direct injection is a capability fallback, not an authentication or server-error workaround. If the helper reaches Pireel but returns HTTP 401 with a freshly issued import token, or reports `server_misconfigured`, stop and surface that infrastructure error. Do not drive hidden file inputs, write a custom upload client, create a carrier video, or install a local ASR stack to route around it.
 
 ## The helper
 
 `../scripts/import-media.mjs` (relative to this reference — the `pireel` skill's `scripts/` dir). Node ≥ 20, zero npm dependencies. For a main video it:
 
-1. Computes the content signature (`name:size:mtime` — the same fingerprint the browser uses, so the same file is one object however it enters).
-2. Starts a throwaway `127.0.0.1` HTTP server and, via `register-local`, hands the bytes to the open Studio tab — the browser fetches them over loopback straight into its local library (OPFS). The video never touches the cloud. If no tab is open it stops here and asks you to open one and retry.
+1. Computes the content fingerprint (`pireel2:<hash>:<size>` — the same fingerprint the browser uses, so the same file is one object however it enters; filename and mtime are not part of it).
+2. Asks the store for the object (`put`): if the bytes already exist the upload is skipped; otherwise it streams the file to a presigned upload URL.
 3. If `ffprobe` is available: probes duration/width/height and the audio-track start offset.
-4. If `ffmpeg` is available and the file has audio: extracts a small AAC track, uploads ONLY that audio to the cloud, and runs Pireel's transcription — the transcript lands on the project immediately.
-5. Registers everything on a project (server-side, conservative targeting) and prints a JSON summary.
+4. If `ffmpeg` is available and the file has audio: extracts a small AAC track, uploads only that audio, and runs Pireel's transcription — the transcript lands on the project immediately.
+5. Registers everything on a project (server-side, conservative targeting: `register` for the main video, `register-asset` for library assets) and prints a JSON summary.
 
 The JSON keeps video import and transcription outcomes separate. `transcription.status` is:
 
@@ -67,16 +55,16 @@ The JSON keeps video import and transcription outcomes separate. `transcription.
 - `skipped` — disabled, no audio track, or ffmpeg was unavailable.
 - `failed` — billing, authentication, upload, storage, or provider failure. The video is still imported, and `error`, optional `http_status`, and a short `detail` explain what needs recovery.
 
-Never interpret `transcript: 0` alone as “the video has no speech.” Check `transcription.status`: for `failed`, surface the error and recover it (for example, let the user add credits for `insufficient_tokens`, then call `get_transcript` in the open Studio tab). Do not repeatedly re-import the local video just to retry transcription.
+Never interpret `transcript: 0` alone as "the video has no speech." Check `transcription.status`: for `failed`, surface the error and recover it (for example, let the user add credits for `insufficient_tokens`, then call `get_transcript`). Do not repeatedly re-import the local video just to retry transcription.
 
-Full flow: open a tab if none is → `import_media` (no args, MCP) → token + `base_url` → run helper with both `--base` and `--token` → read the JSON → `get_state`.
+Full flow: `import_media` (no args, MCP) → token + `base_url` → run helper with both `--base` and `--token` → read the JSON → `get_state`.
 
 ```bash
 node <pireel-skill-dir>/scripts/import-media.mjs --base <base_url> --token <import-token> /path/to/video.mp4
-# options: --ffmpeg/--ffprobe <path> · --no-transcribe
+# options: --ffmpeg/--ffprobe <path> · --no-transcribe · --broll
 ```
 
-**Run the helper OUT of sandbox by default** — it needs the user's local file paths and network access to the Pireel endpoint; request approval instead of attempting a sandboxed run first. When transcription is enabled, the approval description must say that the main video remains local while its extracted AAC is uploaded for cloud ASR. A sandboxed `connection refused` does not mean the server is down.
+**Run the helper OUT of sandbox by default** — it needs the user's local file paths and network access to the Pireel endpoint; request approval instead of attempting a sandboxed run first. The approval description must say that the file is uploaded to the user's Pireel media store and, when transcription is enabled, that its extracted AAC is sent for transcription. A sandboxed `connection refused` does not mean the server is down.
 
 Auth — no user action needed: call the `import_media` MCP tool **with no arguments** first; it returns a short-lived (30 min) import `token` and the exact `base_url` for the connected production/preview environment. Pass both to the helper. Never guess the environment from documentation and never pass OAuth tokens to shell commands.
 
@@ -93,59 +81,57 @@ Resolution order: `--ffmpeg`/`--ffprobe` flags → `FFMPEG_PATH`/`FFPROBE_PATH` 
 If the package manager itself is unavailable or the install command is denied, THEN fall back to a degraded import and tell the user what was skipped. Capability tiers:
 
 - **Both available**: full import — duration/dims registered, transcript ready; transcript-based editing (`get_transcript`, `remove_words`, captions) can start immediately.
-- **ffprobe only**: metadata registered, no transcript. Transcription happens later in the browser when `get_transcript` is called.
-- **Neither**: the video still streams into the open tab and registers; only metadata/transcript are deferred (the browser completes dimensions on load, and `get_transcript` produces the transcript later). Nothing is lost, just deferred.
+- **ffprobe only**: metadata registered, no transcript. Transcription happens later when `get_transcript` is called.
+- **Neither**: the video still uploads and registers; only metadata/transcript are deferred (the browser completes dimensions on load, and `get_transcript` produces the transcript later). Nothing is lost, just deferred.
 
 ## Images
 
-Pass image paths (`.png`/`.jpg`/`.webp`/`.gif`, ≤ 30MB) to the same helper. It serves each file on a throwaway loopback URL; the open Studio tab copies it into device-local OPFS and registers only its signature, dimensions and local locator. Mixed invocations work:
+Pass image paths (`.png`/`.jpg`/`.webp`/`.gif`, ≤ 50MB) to the same helper. Each is uploaded and registered as a library asset with its dimensions. Mixed invocations work:
 
 ```bash
 node import-media.mjs --token … video.mp4 logo.png
 ```
 
-The returned `url_kind` is `local` and the locator starts with `pireel-local-image:`. Use that exact locator in generated component markup. The preview resolves it to an iframe-local object URL; capture and export read the original OPFS file and inline it only in the transient render document. The saved project never contains the bytes, a data URI or an R2 key.
-
-This is deliberately device-local. On a different browser/device the project keeps its locator but cannot render the image until the user imports the same file there. Never work around that by uploading the file or substituting another image.
+The JSON returns the `assetId`; place it with `add_clips {clips:[{assetId, role, startFrame, durationFrames}]}` (an image clip holds for its `durationFrames`) or refer to it from generated component markup through the Materials panel. The saved project references the asset by id; the bytes live in the cloud store and are cached on each device that opens the project.
 
 ## Audio (narration / music / sound effects)
 
-A local audio file (`.mp3`/`.m4a`/`.aac`/`.wav`/`.flac`/`.ogg`, ≤ 200MB) passed to the same helper streams over localhost into the open tab's OPFS library. It comes back with a `registration` object containing its stable local signature and measured duration:
+A local audio file (`.mp3`/`.m4a`/`.aac`/`.wav`/`.flac`/`.ogg`, ≤ 2GB) passed to the same helper is uploaded and registered as a library asset with its measured duration:
 
 ```
 node import-media.mjs --token … /path/to/track.mp3
 ```
 
-Pass `registration` unchanged as one item in `register_media.assets`, then place it with `add_clips` (`startFrame` in timeline frames, optional `source [inSec, outSec]`). Choose `role: "narration"`, `"music"` or `"sfx"` from the user's intent; do not put spoken teaching audio on the music lane. The typed clip can then be trimmed, split, muted, leveled, faded or speed-adjusted like other timeline media (`set_clip_properties` for `volumeDb` / `mute` / `fades` in frames / `speed`, `split_clips`, `move_clips`).
+Place it with `add_clips` (`assetId`, `startFrame` in timeline frames, optional `source [inSec, outSec]`). Choose `role: "narration"`, `"music"` or `"sfx"` from the user's intent; do not put spoken teaching audio on the music lane. The typed clip can then be trimmed, split, muted, leveled, faded or speed-adjusted like other timeline media (`set_clip_properties` for `volumeDb` / `mute` / `fades` in frames / `speed`, `split_clips`, `move_clips`).
 
-The helper probes duration but does not automatically transcribe standalone audio. When meaning or performed timing matters, call `get_transcript` with the `assetId` its registration returned; it reuses stored text and transcribes only when missing. The original bytes remain device-local; only the compressed ASR payload follows Pireel's disclosed transcription path when ASR is requested.
+The helper probes duration but does not automatically transcribe standalone audio. When meaning or performed timing matters, call `get_transcript` with the `assetId`; it reuses stored text and transcribes only when missing.
 
 ## B-roll (insert a clip into the timeline)
 
-To add a local video as a SEGMENT of the current project (not as its main footage), stream it into the open tab with `--broll`:
+To add a local video as a SEGMENT of the current project (not as its main footage), import it with `--broll`:
 
 ```
 node import-media.mjs --token … --broll /path/to/broll.mp4
 ```
 
-This serves the bytes once over localhost, stores them in the open tab's device-local OPFS library, and prints a `sig` plus a `registration`; it does not upload the video to R2. The registration resolves that sig from local OPFS first and gives you an asset id. Place it by asset id: `add_clips {clips:[{assetId, role, startFrame, durationFrames?, source?}]}` when nothing else should move (an overlay on the `broll` lane, or a gap on the spine), or `insert_clips` at a `startFrame` on an existing cut when later material on the sync-locked lanes should ripple to make room. It is a full peer afterwards: framing (`set_clip_framing`), captions, matting, its own audio (`set_clip_properties`), and on-demand transcription all apply. A video already in the user's cloud library (for example a generated one) is registered with `register_media` — pass the returned fields unchanged, never a hand-built locator — and placed the same way. This local sig is device-scoped: on another device the user must restore the same source file instead of silently uploading it.
+It is uploaded and registered as a library asset; the JSON returns its `assetId`. Place it by asset id: `add_clips {clips:[{assetId, role, startFrame, durationFrames?, source?}]}` when nothing else should move (an overlay on the `broll` lane, or a gap on the spine), or `insert_clips` at a `startFrame` on an existing cut when later material on the sync-locked lanes should ripple to make room. It is a full peer afterwards: framing (`set_clip_framing`), captions, matting, its own audio (`set_clip_properties`), and on-demand transcription all apply. A video already in the user's cloud library (for example a generated one) is registered with `register_media` — pass the returned fields unchanged, never a hand-built locator — and placed the same way.
 
 ## Project targeting
 
-`import_media` is conservative: a project that already has footage (placed clips) and a DIFFERENT video is never clobbered — a new project is created automatically, titled after the filename. The latest project is reused only when it is empty or already uses this exact video. The tool result tells you which happened (`reused: true/false`, `projectId`, `title`).
+`import_media` is conservative: a project that already has footage (placed clips) and a DIFFERENT main video is never clobbered — a new project is created automatically, titled after the filename. The latest project is reused only when it is empty or already uses this exact video. The tool result tells you which happened (`reused: true/false`, `projectId`, `title`). Library assets (`--broll`, images, audio) always go to the ACTIVE (most recently touched) project; switch first with `manage_project` when another project is the target.
 
 ## After import
 
-- Call `get_state` — the new/updated project is now the latest, so offline tools target it. From here on, patch your model from each mutation's delta instead of re-reading.
+- Call `get_state` — the new/updated project is now the latest, so offline tools target it; library assets appear with `library: true` until placed. From here on, patch your model from each mutation's delta instead of re-reading.
 - If a transcript was registered (`transcript > 0` in the helper output), use `get_transcript`; for a complete edit follow `storyboard-draft.md`: propose the whole-film design, obtain approval, keep the approved plan in your working context as a few sentences (there is no persisted plan artifact), then build directly with the clip tools.
-- The tab was already open for the import, so media-byte analysis, rendered review and local execution are available. If the user later reopens the project on a DIFFERENT device (where the local bytes aren't cached), the video won't auto-return — they re-pick the file. Cross-device video persistence is a deliberate non-goal of this path.
+- Media-byte analysis, rendered review and export still run in an open tab (`create_browser_handoff`); the tab retrieves the bytes from the cloud store on its own.
 
 ## When NOT to use the helper
 
-- The file is already in the project (check `get_state` — same video sig means re-import is a no-op anyway).
+- The file is already in the project (check `get_state` — same content sig means re-import is a no-op anyway).
 - The user is already in the studio tab and can just drag the file in themselves.
 - Upload is denied by host policy: stop, explain, and ask the user to upload in the studio tab instead. Do not work around a denial.
 
 ## Limits
 
-Single file ≤ 2 GB. Larger sources: ask the user to trim/transcode first (with their consent, ffmpeg can do it locally) or upload via browser.
+Single file ≤ 2 GB (images ≤ 50 MB). Larger sources: ask the user to trim/transcode first (with their consent, ffmpeg can do it locally) or upload via browser.
