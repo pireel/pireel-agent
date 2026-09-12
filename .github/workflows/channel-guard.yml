@@ -60,46 +60,60 @@ jobs:
         env:
           CHANNEL: ${{ steps.channel.outputs.name }}
         run: |
-          # Identity files are generated, so build --check already proves them. What a human can
-          # still get wrong is the agent-facing prose: a skill that names the other environment is
-          # exactly how an agent ends up editing in the wrong place. (README is human-facing and
-          # documents both channels on purpose, so it is not scanned.)
+          # Identity files are generated, so build --check already proves them. What can still go
+          # wrong is the agent-facing prose: a skill that names the other environment is exactly how
+          # an agent ends up logging into, registering, or editing the wrong place.
           node - <<'NODE'
-          const { execSync } = require('node:child_process');
+          const { readdirSync, readFileSync, statSync } = require('node:fs');
+          const { join } = require('node:path');
           const channels = require('./release/channels.json').channels;
           const channel = process.env.CHANNEL;
-          const mine = channels[channel];
+          const esc = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-          // The check is asymmetric by nature. A preview identity is distinctive (`pireel-preview`,
-          // `preview.pireel.com`), but a production one is the bare name: `pireel` is a substring of
-          // `pireel-basics` and `codex mcp login pireel`, and `Pireel Studio` is a prefix of
-          // `Pireel Studio Preview`. So only search for another channel's value when this channel's
-          // own value does not already contain it — otherwise every ordinary mention is a false hit.
-          const distinctive = (theirs, ours) => theirs && !String(ours ?? '').includes(theirs);
+          // Scan only for identifiers the agent ACTS on. The product's display name runs through
+          // ordinary prose in both channels ("Pireel Studio is a multi-source editor"), so matching
+          // it flags every sentence; what must never cross a channel is a name the reader logs
+          // into, registers or calls. `(?![\w-])` keeps `pireel` out of `pireel-preview`.
+          const patterns = (c) => [
+            [String.raw`\`${esc(c.mcpServer)}\` MCP server`, 'names it as the server to call'],
+            [String.raw`mcp login ${esc(c.mcpServer)}(?![\w-])`, 'logs in there'],
+            [String.raw`\[mcp_servers\.${esc(c.mcpServer)}\]`, 'registers it'],
+            [String.raw`--transport http ${esc(c.mcpServer)}(?![\w-])`, 'registers it'],
+            [String.raw`${esc(c.baseUrl)}/api/studio/mcp`, 'points at its endpoint'],
+            [String.raw`${esc(c.marketplace)}(?![\w-])`, 'names its marketplace'],
+          ];
+
+          const files = [];
+          const walk = (dir) => {
+            for (const e of readdirSync(dir)) {
+              const full = join(dir, e);
+              if (statSync(full).isDirectory()) walk(full);
+              else if (/\.(md|mjs|js|json|txt)$/.test(e)) files.push(full);
+            }
+          };
+          for (const plugin of readdirSync('plugins')) {
+            const skills = join('plugins', plugin, 'skills');
+            try { if (statSync(skills).isDirectory()) walk(skills); } catch {}
+          }
 
           let bad = false;
           for (const [name, other] of Object.entries(channels)) {
             if (name === channel) continue;
-            const needles = [
-              [`${other.baseUrl}/api/studio/mcp`, `${mine.baseUrl}/api/studio/mcp`],
-              [other.mcpServer, mine.mcpServer],
-              [other.marketplace, mine.marketplace],
-              [other.displayName, mine.displayName],
-            ].filter(([theirs, ours]) => distinctive(theirs, ours)).map(([theirs]) => theirs);
-
-            for (const needle of needles) {
-              const hit = execSync(`grep -R -n -F -- "$NEEDLE" plugins/*/skills || true`, {
-                encoding: 'utf8',
-                shell: '/bin/bash',
-                env: { ...process.env, NEEDLE: needle },
-              });
-              if (hit.trim()) {
-                console.error(`::error::${channel} skills name the ${name} environment (${needle}):`);
-                console.error(hit);
-                bad = true;
+            for (const [source, what] of patterns(other)) {
+              const re = new RegExp(source, 'g');
+              for (const file of files) {
+                for (const line of readFileSync(file, 'utf8').split('\n')) {
+                  re.lastIndex = 0;
+                  if (!re.test(line)) continue;
+                  console.error(`::error file=${file}::${channel} skills reach the ${name} environment — this ${what}: ${line.trim()}`);
+                  bad = true;
+                }
               }
             }
           }
-          if (bad) process.exit(1);
-          console.log(`skills name only the ${channel} environment`);
+          if (bad) {
+            console.error('Rewrite it in the PROSE rules of scripts/build-channel.mjs; never hand-patch a published branch.');
+            process.exit(1);
+          }
+          console.log(`skills name only the ${channel} environment (${files.length} files scanned)`);
           NODE

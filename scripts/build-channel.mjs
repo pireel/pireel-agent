@@ -80,8 +80,14 @@ const PROSE = channel.baseUrl === 'https://pireel.com' ? [] : [
   { file: `${SKILLS}/pireel/SKILL.md`, must: true, from: "the user's latest project", to: "the user's latest Preview project" },
   { file: `${SKILLS}/pireel/references/getting-started.md`, must: true, from: 'FIRST-RUN setup for Pireel Studio.', to: `FIRST-RUN setup for ${channel.displayName}.` },
   { file: 'README.md', must: true, from: 'or another compatible AI agent to\n[Pireel Studio](https://pireel.com).', to: `or another compatible AI agent to the\nisolated [${channel.displayName}](${channel.baseUrl}) environment.` },
-  { file: 'README.md', must: true, from: '--transport http pireel https://', to: `--transport http ${channel.mcpServer} https://` },
   { re: /`pireel` MCP server/g, to: `\`${channel.mcpServer}\` MCP server`, skillsOnly: true },
+  /* Every place the server name is an identifier the reader types or registers, rather than the
+   * product's name in prose. channel-guard.yml searches for exactly these forms in the other
+   * direction, so a rule missing here fails CI rather than shipping a login into the wrong
+   * environment. The lookahead keeps `pireel` from matching inside `pireel-preview`. */
+  { re: /mcp login pireel(?![\w-])/g, to: `mcp login ${channel.mcpServer}` },
+  { re: /\[mcp_servers\.pireel\]/g, to: `[mcp_servers.${channel.mcpServer}]` },
+  { re: /--transport http pireel(?![\w-])/g, to: `--transport http ${channel.mcpServer}` },
   { re: /Pireel Studio \(https:\/\//g, to: `${channel.displayName} (https://` },
   { re: /(?<!preview\.)https:\/\/pireel\.com/g, to: channel.baseUrl },
 ];
