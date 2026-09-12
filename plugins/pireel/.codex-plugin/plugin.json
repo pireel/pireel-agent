@@ -42,7 +42,7 @@
     "codex",
     "mcp"
   ],
-  "version": "0.7.5",
+  "version": "0.7.6",
   "description": "Preview Pireel's latest agent workflows for editing multi-source videos and creating finished cuts.",
   "homepage": "https://preview.pireel.com",
   "mcpServers": "./.mcp.json",
