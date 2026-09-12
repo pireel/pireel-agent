@@ -33,11 +33,11 @@ install the repository's `preview` branch as a separate marketplace:
 ```bash
 # Codex
 codex plugin marketplace add pireel/pireel-agent --ref preview
-codex plugin add pireel@pireel-preview
+codex plugin add pireel-preview@pireel-preview
 
 # Claude Code
 claude plugin marketplace add pireel/pireel-agent --ref preview
-claude plugin install pireel@pireel-preview
+claude plugin install pireel-preview@pireel-preview
 ```
 
 The Preview plugin registers the independent `pireel-preview` MCP server, so it
