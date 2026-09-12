@@ -1,6 +1,6 @@
 ---
 name: getting-started
-description: FIRST-RUN setup for Pireel Studio Preview. Run this whenever the user asks to install, connect, set up, or start using Pireel Preview, or when a `pireel-preview` MCP tool fails because the server is not connected yet. Registers the Preview MCP server, drives the OAuth login, imports the user's first video, opens the live editor, and prints a self-report. After setup, route work through `pireel-basics` and the task skills.
+description: FIRST-RUN setup for Pireel Studio Preview. Run this whenever the user asks to install, connect, set up, or start using Pireel, or when a `pireel` MCP tool fails because the server is not connected yet. Registers the Pireel MCP server, drives the OAuth login, imports the user's first video, opens the live editor, and prints a self-report. After setup, route work through `pireel-basics` and the task skills.
 ---
 
 # Getting started with Pireel Studio
@@ -11,7 +11,7 @@ If you are reading this, the Pireel workflow is already available either from th
 
 **If you JUST installed the skill this turn: do NOT stop.** A freshly-installed skill only auto-activates in a *new* session, but this file is already on disk — read it and run the steps below **now, in the same turn**. Never end your turn at "the skill will be available next time" or tell the user to start a new conversation; keep going straight into Step 1.
 
-**Base URL** (`<BASE>` below): `https://preview.pireel.com`, unless the user explicitly asks to run Pireel locally, in which case use their localhost origin (e.g. `http://localhost:3005`). Never substitute the production origin while this Preview plugin is active.
+**Base URL** (`<BASE>` below): `https://preview.pireel.com`, unless the user explicitly asks to run Pireel locally, in which case use their localhost origin (e.g. `http://localhost:3005`). Never substitute the Preview origin while this production plugin is active.
 
 **Host gate**: if Pireel MCP tools are already available through the installed Plugin, continue on any supported host. Web/mobile/remote hosts can work with cloud projects, stock media and server-side tools, but cannot read a path on the user's computer or edit its local agent config. A LOCAL desktop/CLI host is required only when registering MCP for a standalone Skill or importing local-file bytes through the helper.
 
@@ -25,10 +25,10 @@ MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
 
 - **Standalone Skill on a Plugin-capable host:** do not treat the existing standalone MCP as the preferred route. Install the matching Pireel Plugin through the host's native Plugin manager, reload when required, authenticate, and verify `get_state` against this exact `<BASE>` endpoint. Only after that succeeds may you retire the standalone Skill/manual MCP entry through the host's supported removal flow. Never remove the working standalone connection before verification. If Plugin installation or verification fails, preserve it and continue below.
 
-- **Standalone Skill on Codex when Plugin installation is unavailable:** run `codex mcp login pireel-preview`. If the server is not registered yet, add it to `~/.codex/config.toml` first — the `oauth_resource` line is REQUIRED (without it Codex expects a static bearer token instead of OAuth):
+- **Standalone Skill on Codex when Plugin installation is unavailable:** run `codex mcp login pireel`. If the server is not registered yet, add it to `~/.codex/config.toml` first — the `oauth_resource` line is REQUIRED (without it Codex expects a static bearer token instead of OAuth):
 
   ```toml
-  [mcp_servers.pireel-preview]
+  [mcp_servers.pireel]
   url = "<BASE>/api/studio/mcp"
   oauth_resource = "<BASE>/api/studio/mcp"
   ```
@@ -36,7 +36,7 @@ MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
 - **Claude Code**:
 
   ```bash
-  claude mcp add --transport http pireel-preview <BASE>/api/studio/mcp
+  claude mcp add --transport http pireel <BASE>/api/studio/mcp
   ```
 
 - **Other MCP clients**: register a streamable-HTTP server at the endpoint above. OAuth discovery is standard (RFC 8414 / 9728 metadata at `<BASE>/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource`).
@@ -45,30 +45,32 @@ MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
 
 No API keys. The endpoint answers unauthenticated calls with a `WWW-Authenticate` challenge; the MCP client discovers the OAuth flow from it automatically.
 
-- **Codex**: `codex mcp login pireel-preview` opens the browser sign-in; the user logs into their Pireel Preview account and approves.
+- **Codex**: `codex mcp login pireel` opens the browser sign-in; the user logs into their Pireel account and approves.
 - **Claude Code**: the client prompts on first use (or via `/mcp`) — follow the browser flow.
 
 ## Step 3 — Verify the connection
 
 Call `get_state` and interpret:
 
-- `<composition_state>` snapshot → the user's studio tab is open and bridged; fully connected.
-- `OFFLINE MODE` snapshot → connected; no tab, but data-level editing works against the user's latest cloud project.
+- A live state (canvas, playhead, tracks with clips, asset inventory, outputs list) → the user's studio tab is open and bridged; fully connected.
+- `OFFLINE MODE` state → connected; no tab, but data-level editing works against the user's latest cloud project.
 - `no cloud project` → connected; fresh account. Go to Step 4.
 - HTTP 401 after OAuth → re-run the login flow; the token may not have been granted.
+
+`get_state` is a once-per-session read: every later mutation returns a delta (touched clips, shifted rules, removed clips, caption changes) that you patch into your model. Re-read it only after a switch (`manage_project`), an undo, a rejected call, or when a receipt says the state is stale.
 
 ## Step 4 — REQUIRED final step: start the first task
 
 Ask the user how to start, then do it:
 
-**Open the live editor FIRST** (both paths need a tab; the local-video path streams the bytes straight into it): call `create_browser_handoff` and open the returned `url` with **your own built-in/embedded browser tool**. On Codex, drive the in-app browser through the official Browser runtime; do not proactively choose connected Chrome. Never use OS `open`/`start`/`xdg-open` or an uncontrolled default browser: the ticket is single-use (~60 s). Keep the tab visible and open using that browser runtime's keep/finalize controls. Only after the helper explicitly returns `local loopback is unreachable from this browser` may you release that isolated tab, open a fresh handoff in a controllable connected browser that shares the host's `127.0.0.1`, and retry once with a fresh token. To hand the user a link, give the plain `<BASE>/zh/studio/<projectId>` instead — never the handoff URL.
+**Open the live editor** when you want to see the result (imports do not need a tab): call `create_browser_handoff` and open the returned `url` with **your own built-in/embedded browser tool**. On Codex, drive the in-app browser through the official Browser runtime; do not proactively choose connected Chrome. Never use OS `open`/`start`/`xdg-open` or an uncontrolled default browser: the ticket is single-use (~60 s). Keep the tab visible and open using that browser runtime's keep/finalize controls. To hand the user a link, give the plain `<BASE>/zh/studio/<projectId>` instead — never the handoff URL.
 
-**A. From a local video file** (most common) — with the tab open from above. Two ways, both keep the video local (no upload):
+**A. From a local video file** (most common). Two ways:
 
-- **Primary — the helper**: `import_media` with NO args → `token` + `base_url` → run `node <helper> --base <base_url> --token <token> /path/to/video.mp4` (bundled at `<pireel-skill-dir>/scripts/import-media.mjs`, or `curl -fsSL <base_url>/import-media.mjs`; install `ffmpeg`/`ffprobe` yourself if missing). Use the returned `base_url` exactly so preview connections never fall through to production. It streams the video into the open tab over the user's machine (not uploaded), transcribes, and registers a project in one shot. If it reports `studio_not_open`, redo the handoff and re-run.
-- **Fallback — inject it directly** (helper unavailable, and you drive the browser): start `tab.playwright.waitForEvent('filechooser')`, click `tab.playwright.locator('[data-pireel-video-trigger]')`, then pass the absolute path to the returned chooser's `setFiles(...)`. The studio loads it locally into its OPFS library and makes it the main video. Then call `read_script`; it returns a stored transcript or transcribes when missing.
+- **Primary — the helper**: `import_media` with NO args → `token` + `base_url` → run `node <helper> --base <base_url> --token <token> /path/to/video.mp4` (bundled at `<pireel-skill-dir>/scripts/import-media.mjs`, or `curl -fsSL <base_url>/import-media.mjs`; install `ffmpeg`/`ffprobe` yourself if missing). Use the returned `base_url` exactly so production connections never fall through to Preview. It uploads the video to the user's Pireel cloud media store (content-addressed; a duplicate is instant), transcribes, and registers a project in one shot — no studio tab required.
+- **Fallback — inject it directly** (helper unavailable, and you drive the browser): start `tab.playwright.waitForEvent('filechooser')`, click `tab.playwright.locator('[data-pireel-video-trigger]')`, then pass the absolute path to the returned chooser's `setFiles(...)`. The studio imports it (device cache + cloud upload) and makes it the main video. Then call `get_transcript`; it returns a stored transcript or transcribes when missing.
 
-Then `get_state` and edit. See the `asset-import` skill for the full transfer matrix.
+Then `get_state` and edit (an empty timeline is not a blocker: place the library footage with `add_clips` role `primary`, then edit it). See the `asset-import` skill for the full transfer matrix.
 
 **B. From the browser**: the user opens `<BASE>`, creates a studio project and uploads a video there; the live bridge connects automatically.
 

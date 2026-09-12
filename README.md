@@ -79,7 +79,7 @@ Some preparation tasks can also continue without keeping the Studio tab open.
 ## Update
 
 - **Plugin installation:** update or reinstall Pireel through the host's Plugins
-  manager. The Plugin version is managed independently from the workflow baseline.
+  manager. One release version covers both the Plugin manifest and the bundled Skill.
 - **Standalone Skill:** run:
 
 ```bash
@@ -94,28 +94,64 @@ remove the working connection before the Plugin endpoint succeeds.
 
 ## Release channels
 
-Plugin SemVer and the MCP/Skill workflow baseline are separate. Their only editable source is
-`release/channels.json`; do not hand-edit `plugin.json` or the Skill `VERSION` during a release.
+Each channel has **one** release version. `release/channels.json` is the only editable source; do
+not hand-edit `plugin.json` or the Skill `VERSION` during a release. The script writes the same
+SemVer into the Plugin manifest (what the host orders upgrades by) and the bundled Skill `VERSION`
+(what the MCP server announces and the agent compares for equality), and records a content digest
+of the skill tree so CI can tell when skill files were edited without a release.
 
-Preview release:
-
-```bash
-node scripts/release-channel.mjs preview \
-  --plugin-version 0.8.0-preview.1 \
-  --workflow-version 2026-08-21.2
-```
-
-Stable promotion (run after the shared workflow has landed on `main`):
+Preview release (on the `preview` branch):
 
 ```bash
-node scripts/release-channel.mjs production \
-  --plugin-version 0.8.0 \
-  --workflow-version 2026-08-21.2
+node scripts/release-channel.mjs preview --bump prerelease   # 0.7.1-preview.1 -> 0.7.1-preview.2
+node scripts/release-channel.mjs preview --bump patch        # start a new line: 0.7.2-preview.1
+node scripts/release-channel.mjs preview --version 0.8.0-preview.1   # or name it explicitly
 ```
 
-The script refuses the wrong branch and Preview/stable SemVer mixups, then synchronizes the
-channel manifest, Plugin manifest, and bundled Skill baseline. CI runs the matching `--check`
-command and separately verifies endpoint isolation.
+Stable promotion (on `main`, after the shared workflow has landed there):
+
+```bash
+node scripts/release-channel.mjs production --bump patch     # 0.7.2 -> 0.7.3
+node scripts/release-channel.mjs production --version 0.8.0  # or name it explicitly
+```
+
+`--bump` takes `patch`, `minor`, `major` (a preview line restarts at `-preview.1`) or `prerelease`
+(preview only, advances `N`). The script refuses the wrong branch, Preview/stable SemVer mixups,
+and any version that is not strictly greater than the channel's current one — a host only upgrades
+forward within a channel. `--check` (run by CI) recomputes the skill digest and verifies the
+channel, Plugin manifest, Skill `VERSION`, marketplace and MCP endpoint all agree; `--digest`
+prints the current skill digest. Production and preview are independent version lines and are
+never compared with each other.
+
+### Syncing the preview line
+
+The `preview` branch differs from the source line only by its **identity** — the `pireel-preview`
+MCP server, `preview.pireel.com` endpoints and "Pireel Studio Preview" wording — so an agent can
+never confuse environments. Its skill content must otherwise match byte for byte. Never edit skill
+files on `preview` by hand; refresh it from the source line and release:
+
+```bash
+git checkout preview
+node scripts/sync-preview.mjs --from develop     # copy skills + README, apply the preview identity
+node scripts/sync-preview.mjs --verify develop   # prove only identity differs
+node scripts/release-channel.mjs preview --bump prerelease
+```
+
+`--from` aborts if an identity anchor it expects is missing (the source wording moved — update the
+rule, don't hand-patch). `.mcp.json`, `plugin.json`, `marketplace.json` and the Skill `VERSION` are
+branch-owned and never synced.
+
+### Releasing through a pull request
+
+The `skill version guard` workflow fails a pull request whose skill tree changed without a moved
+version, and the release script refuses to run for a channel from any other branch. To release
+via a PR, prepare the release on the source branch with the branch override, commit, and open the
+PR — the guard sees the moved version and passes; merging is the release:
+
+```bash
+PIREEL_RELEASE_BRANCH=main node scripts/release-channel.mjs production --bump patch
+git commit -am "release: production 0.7.3"
+```
 
 ## Usage and credits
 

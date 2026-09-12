@@ -5,17 +5,18 @@ description: Edit videos in Pireel Studio Preview through the `pireel-preview` M
 
 # Pireel Studio
 
-Pireel Studio Preview (https://preview.pireel.com) is a multi-source video editor that can produce multiple independently editable cuts from one project. Your tools edit the composition **live in the user's open studio browser tab** via the `pireel-preview` MCP server; when no tab is open, data-level tools fall back to **OFFLINE MODE** against the user's latest Preview project.
+Pireel Studio Preview (https://preview.pireel.com) is a multi-source, multi-track video editor that can produce multiple independently editable cuts from one project. Your tools edit the composition **live in the user's open studio browser tab** via the `pireel-preview` MCP server; when no tab is open, data-level tools fall back to **OFFLINE MODE** against the user's latest Preview project.
 
 This one skill covers the whole product. Skim the essentials below, then **open the matching file in `references/` for the task at hand** — don't work from memory on the specialized flows.
 
 ## Essentials (true for everything)
 
-- **Two element kinds.** **Components** are the broad extensible visual-element concept and are stored as overlay **blocks**; Motion Graphics (words, number, data, logo, overlay, real source) are the primary Component family available today. Video **shots** = segments of the talking-head clip, each with a framing treatment (`full` / `punch-in` / `corner-tl`|`corner-tr`|`corner-bl`|`corner-br` / `split-l`|`split-r`|`split-t`|`split-b`; the split axis follows the canvas — portrait splits top/bottom, landscape splits left/right). Cuts are hard jumps; visual variety comes from framing, not transitions.
-- **`get_state` first — and again after any failed mutation.** Ids for blocks/shots/frames/presets come from `get_state`, tool receipts, `list_frames`, or the caption catalog. Never invent an id.
-- **Two clocks.** "edited" = final-timeline seconds (cut/split/trim/add_block address by it). "src" = a segment's own source-file seconds (the narration transcript uses the MAIN source clock). Don't mix them.
-- **BYO generation is free.** Text/HTML you write yourself (block composition, plan, visual labels) runs on the user's own agent subscription, NOT Pireel credits. Only tools whose description carries a `[…CHARGES…]` marker bill credits (image/video generation + Pireel-LLM fallbacks). Prefer the BYO path.
-- **Surface the editor early on real work.** Call `create_browser_handoff` and open the returned `url` with YOUR OWN built-in/embedded browser tool — on Codex, use the in-app Browser runtime rather than connected Chrome. Never use the OS `open`/`start`/`xdg-open`, the user's default browser, or an already-connected external Chrome proactively (single-use ticket, ~60s). Keep that tab visible and open past your turn using its keep/finalize controls (details in `references/pireel-basics.md`). If and only if a LOCAL helper attempt explicitly returns `local loopback is unreachable from this browser`, release the isolated tab, open one fresh handoff in a controllable connected browser that shares the agent host's `127.0.0.1`, and retry once with a fresh token. Never print the handoff url.
+- **What you edit.** Typed tracks of clips: a primary video story spine (`role=primary`), concurrent B-roll / PiP (`role=broll`), a graphics lane, narration / music / SFX audio lanes, and one managed caption track. Clip kinds: narrative (spoken story footage), media (video or image on any lane), graphic — a **Component** (Motion Graphics are the main Component family today), audio, and text (native titles set with `set_texts`). Every clip occupies integer frames `[start, end)` on the timeline and keeps its own source clock in seconds; media clips carry framing (`full` / `punch-in` / `corner-*` / `split-*` treatments, or an exact transform / crop via `set_clip_framing`), speed, color filter and audio treatment (`set_clip_properties`). A cut between story-spine clips is a hard cut by default; `add_transition` adds one where a change of time, place, chapter or mode earns it.
+- **Speech is one editing surface, not the entrance.** When footage carries speech, `get_transcript` + `remove_words` edit it by transcript (never by frames). When it doesn't — B-roll, product footage, screen recordings, music-led montage — edit by time, picture and sound with the same clip tools (`add_clips` / `insert_clips` / `split_clips` / `move_clips` / `ripple_delete_ranges` / `set_clip_properties` / `set_clip_framing` / `add_clips {role:"music"}`). Never ask for a script or transcript before editing speechless footage; `get_transcript` reporting no coverage is information, not an error.
+- **`get_state` once per session — then patch from deltas.** Every mutation returns a delta (touched clips, shifted rules, removedClipIds, removedSource, caption changes); re-read `get_state` only after a failed mutation, an output/project switch, an undo, or when a receipt note says the state is stale. Ids for clips/tracks/components/frames/presets come from `get_state`, tool receipts, `manage_frame {action:"list"}`, or the caption catalog. Never invent an id.
+- **Two clocks.** "edited" = timeline **frames** (`startFrame` / `atFrame` / `fromFrame` / `toFrame` / `durationFrames` — `add_clips`, `split_clips`, `ripple_delete_ranges`, `move_clips`, `apply_component` address by it; `get_state` gives the fps and every tool converts, never multiply by fps yourself). "src" = a clip's own source-file **seconds** (`source [inSec, outSec]`; a transcript is stamped in its own source's clock and never moves when the timeline is cut). Don't mix them.
+- **BYO generation is free.** Text/markup you write yourself (component composition, the plan you hold in working context, visual labels) runs on the user's own agent subscription, NOT Pireel credits. Only tools whose description carries a `[…CHARGES…]` marker bill credits (image/video/audio/speech generation + Pireel-LLM fallbacks such as `apply_component {generate:true}`). Prefer the BYO path.
+- **Surface the editor early on real work.** Call `create_browser_handoff` and open the returned `url` with YOUR OWN built-in/embedded browser tool — on Codex, use the in-app Browser runtime rather than connected Chrome. Never use the OS `open`/`start`/`xdg-open`, the user's default browser, or an already-connected external Chrome proactively (single-use ticket, ~60s). Keep that tab visible and open past your turn using its keep/finalize controls (details in `references/pireel-basics.md`). Never print the handoff url.
 
 ## Routing — read the reference for the task
 
@@ -23,15 +24,22 @@ This one skill covers the whole product. Skim the essentials below, then **open 
 |---|---|
 | Install / connect / set up Pireel, or a tool reports it's not connected | `references/getting-started.md` |
 | Understand the model + tool routing in depth (read before the first edit) | `references/pireel-basics.md` |
+| Use an account private/community Studio Skill or its bound voice | `references/pireel-basics.md` |
 | Use a LOCAL video or image file | `references/asset-import.md` |
-| Mix several clips, make product ads, or create multiple editable outputs / variants | `references/montage-variants.md` |
-| Clean up a raw talking-head A-roll (retakes, filler, dead air) | `references/talking-head-cleanup.md` |
-| Add a designed graphic block (BYO HTML) | `references/compose-blocks.md` |
+| Edit a speech-led video end to end (interview, lesson, commentary, podcast, direct-to-camera): cleanup, restructure, B-roll, graphics, sound | `references/craft/talking-head-edit.md` |
+| Clean up a raw talking-head A-roll only (retakes, filler, dead air) | `references/talking-head-cleanup.md` |
+| Compose a montage from a body of footage (emotion, motifs, rhythm, sound) | `references/craft/montage-edit.md`, then `references/montage-variants.md` for output families / variants |
+| Mix several clips into product ads or create multiple editable outputs / variants | `references/montage-variants.md` |
+| Edit footage that has no speech (B-roll, product shots, screen recordings, music-led material) | `references/pireel-basics.md` (clip tools) → `references/craft/montage-edit.md` for a deliberate assembly |
+| Add / fit background music, sound effects, per-clip sound, transitions, or beat-aligned cuts | `references/craft/audio-and-music.md` |
+| Add a designed graphic component (BYO markup) | `references/compose-blocks.md` |
 | Design or execute a complete first cut / finished video | `references/storyboard-draft.md` |
+
+`references/craft/` holds Pireel's built-in craft skills verbatim — the same playbooks the Studio chat uses and that `list_skills` / `read_skill` serve over MCP. Read the local copy (no round trip); if the MCP server announces a workflow baseline different from your installed `VERSION`, prefer `read_skill` for the freshest text.
 | Add / restyle captions | `references/captions.md` |
 | Export an MP4 | `references/export.md` |
 | Answer pricing / credits / plan / UI questions | `references/product-help.md` |
-| Recover from a tool error, timeout, or `apply_block` lint rejection | `references/known-errors.md` |
+| Recover from a tool error, timeout, or `apply_component` lint rejection | `references/known-errors.md` |
 
 The local media import helper lives at `scripts/import-media.mjs` (Node ≥ 20, zero dependencies).
 
@@ -43,9 +51,9 @@ Agent orchestration and every BYO flow run on the user's own agent subscription,
 
 ## Distribution preference and workflow updates
 
-The `VERSION` file next to this SKILL.md is the Pireel **workflow baseline**, not the
-Plugin version. The Plugin has its own SemVer in `.codex-plugin/plugin.json`; never compare
-those two values.
+The `VERSION` file next to this SKILL.md is the Pireel **workflow baseline**: the release version
+of this skill bundle, the same value a Plugin install carries in `.codex-plugin/plugin.json`.
+Treat it as an opaque tag — compare it for equality only, never order it.
 
 First determine how this skill was installed. A Plugin bundle has a host-provided Plugin identity
 or a `.codex-plugin/plugin.json` two directories above this SKILL.md. Anything else is standalone.

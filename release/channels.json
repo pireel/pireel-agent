@@ -3,8 +3,8 @@
     "branch": "main",
     "pluginRoot": "plugins/pireel",
     "marketplace": "pireel-marketplace",
-    "pluginVersion": "0.7.1",
-    "workflowVersion": "2026-08-22.1",
+    "version": "0.7.1",
+    "skillDigest": "sha256:cab1b9a5bf3a1868b007fa818a641f999ded49e29324ad35f2006c650a5b5706",
     "mcpServer": "pireel",
     "baseUrl": "https://pireel.com"
   },
@@ -12,8 +12,8 @@
     "branch": "preview",
     "pluginRoot": "plugins/pireel",
     "marketplace": "pireel-preview",
-    "pluginVersion": "0.7.1-preview.1",
-    "workflowVersion": "2026-08-22.1",
+    "version": "0.7.1-preview.2",
+    "skillDigest": "sha256:ca02ee0bb6d0a201f434502ca5ec51582a4e1ef2c47170eb545b52f59f96ba13",
     "mcpServer": "pireel-preview",
     "baseUrl": "https://preview.pireel.com"
   }

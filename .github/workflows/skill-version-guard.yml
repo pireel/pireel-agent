@@ -1,13 +1,11 @@
 name: skill version guard
-
-# Each release channel owns one workflow baseline in release/channels.json. The release script
-# synchronizes it into the bundled Skill VERSION; this guard rejects drift and unversioned edits.
-
+# Each release channel owns ONE version in release/channels.json. The release script writes it into
+# the Plugin manifest and the bundled Skill VERSION, and records a content digest of the skill tree.
+# This guard rejects drift (skills edited without a release) and manifests that disagree.
 on:
   push:
     branches: [main, preview]
   pull_request:
-
 jobs:
   guard:
     runs-on: ubuntu-latest
@@ -27,8 +25,10 @@ jobs:
           esac
           echo "name=$CHANNEL" >> "$GITHUB_OUTPUT"
           echo "plugin_root=$(node -e 'const c=require("./release/channels.json"); process.stdout.write(c[process.argv[1]].pluginRoot)' "$CHANNEL")" >> "$GITHUB_OUTPUT"
+          # --check recomputes the skill digest, so any skill edit that skipped a release fails here,
+          # and it verifies plugin.json / VERSION / marketplace / MCP endpoint all match the channel.
           PIREEL_RELEASE_BRANCH="$RELEASE_BRANCH" node scripts/release-channel.mjs "$CHANNEL" --check
-      - name: skill changes must bump the version
+      - name: skill changes must ship as a new version
         if: steps.channel.outputs.skip != '1'
         env:
           CHANNEL: ${{ steps.channel.outputs.name }}
@@ -46,21 +46,19 @@ jobs:
           fi
           SKILL_DIR="$PLUGIN_ROOT/skills"
           VERSION_FILE="$SKILL_DIR/pireel/VERSION"
-          # The tag is opaque (clients update on mismatch, not ordering) — the only shape
-          # requirement is one clean token; the real invariant is that it CHANGES per release.
-          if [ "$(wc -l < "$VERSION_FILE")" -gt 1 ] || ! grep -qE '^[^[:space:]]{1,64}$' "$VERSION_FILE"; then
-            echo "::error::$VERSION_FILE must be a single non-empty token line."
-            exit 1
-          fi
-          if git diff --quiet "$BASE" HEAD -- "$SKILL_DIR/"; then
+          if git diff --quiet "$BASE" HEAD -- "$SKILL_DIR/" ":(exclude)$VERSION_FILE"; then
             echo "Skill tree unchanged; ok."
             exit 0
           fi
-          if ! git diff --quiet "$BASE" HEAD -- "$VERSION_FILE" && \
-             ! git diff --quiet "$BASE" HEAD -- release/channels.json; then
-            echo "Skill tree changed and $CHANNEL release baseline changed; ok."
+          # Skill content changed: the channel version must move, or Plugin users are told to update
+          # to a version that does not exist.
+          # Base may predate the single-version manifest (pluginVersion); never write undefined to stdout.
+          BASE_VERSION="$(git show "$BASE:release/channels.json" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const c=JSON.parse(s)[process.argv[1]]||{};process.stdout.write(String(c.version??c.pluginVersion??""))})' "$CHANNEL")"
+          HEAD_VERSION="$(node -e 'const c=require("./release/channels.json"); process.stdout.write(c[process.argv[1]].version)' "$CHANNEL")"
+          if [ "$BASE_VERSION" != "$HEAD_VERSION" ]; then
+            echo "Skill tree changed and $CHANNEL version moved $BASE_VERSION -> $HEAD_VERSION; ok."
             exit 0
           fi
-          echo "::error::$SKILL_DIR/ changed without a synchronized $CHANNEL workflow release."
-          echo "Run scripts/release-channel.mjs for this channel with a new workflow version."
+          echo "::error::$SKILL_DIR/ changed but $CHANNEL version is still $HEAD_VERSION."
+          echo "Run: node scripts/release-channel.mjs $CHANNEL --version <next>"
           exit 1

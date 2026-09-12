@@ -1,26 +1,37 @@
 ---
 name: talking-head-cleanup
-description: Judgment playbook for cleaning up talking-head narration in Pireel Studio by its transcript — removing filler words, retakes, false starts, and recording pre/post-roll. Use whenever the user asks to clean up, tighten, de-um, trim, or "just fix" the spoken track, or to make a highlight / short version. Same content the read_editing_guide tool returns, so with this skill loaded you can skip that call.
+description: Judgment playbook for cleaning up talking-head narration in Pireel Studio by its transcript — removing filler words, retakes, false starts, and recording pre/post-roll. Use whenever the user asks to clean up, tighten, de-um, trim, or "just fix" the spoken track, or to make a highlight / short version. Same content the official speech-cleanup Studio Skill returns via read_skill, so with this skill loaded you can skip that call.
 ---
 
 # Talking-head speech cleanup
 
-This is the A-roll speech-cleanup playbook for Pireel Studio. It is the SAME content the `read_editing_guide` MCP tool returns — with this skill loaded you do not need to call that tool. This is judgment, not new tools: execute with the tools you already have.
+This is the A-roll speech-cleanup playbook for Pireel Studio. It is the SAME content the official
+`speech-cleanup` Studio Skill returns from `read_skill {id:"speech-cleanup"}` — with this skill loaded
+you do not need to call that tool. This is judgment, not new tools: execute with the tools you already have.
 
 ## How cuts map to tools
 
-- **Main narration**: `read_script` gives sentences in SOURCE-video seconds. Remove spoken passages with `cut_narration` (pass those source-second ranges; it converts to the edited timeline, compresses overlays, and re-lays captions).
-- **Inserted `[clip X]` segments**: their own clock — cut with `cut_range` (edited seconds) or drop the whole segment with `delete_shot`.
-- Explain edits to the user by the actual spoken words, NEVER by segment ids or timestamps — the user can't see those.
+- **Spoken footage on any lane**: `get_transcript` (default `granularity:"segments"`) gives sentence rows
+  in SOURCE seconds for any speech-bearing asset, clip or track. Remove spoken passages with
+  `remove_words {ranges}` (pass those source-second ranges; it converts to the timeline, cuts the footage,
+  re-lays overlays and captions). Never cut speech by frames.
+- **Exact words** inside an identified passage: one narrowed `get_transcript {granularity:"words",
+  clipId, segmentIndexes | fromFrame/toFrame}` for that passage → `remove_words {wordIds}`. Word ids shift
+  after every cut — re-read before the next word cut. Never scan a whole transcript at word granularity.
+- **Clips inserted from another source** have their own source clock: `get_transcript {clipId}` reads
+  their speech and `remove_words` cuts it by the same rules; a non-speech span is cut with
+  `ripple_delete_ranges` (timeline frames) or the whole clip dropped with `remove_clips`.
+- Explain edits to the user by the actual spoken words, NEVER by segment ids, frame numbers or timestamps
+  — the user can't see those.
 
 ## Workflow (any "clean up / tighten / de-um the narration" request = run this end to end)
 
-1. **Orient** — `read_script` if the transcript isn't already in the conversation. Read the whole thing; understand the goal and the content structure, and reconstruct full sentences across ASR rows.
+1. **Orient** — `get_transcript` if the transcript isn't already in the conversation. Read the whole thing; understand the goal and the content structure, and reconstruct full sentences across ASR rows.
 2. **Decide the removals** by the rules below — for a long transcript work section by section. Collect EVERY source-second range to drop: hesitation fillers, failed retakes, false starts, abandoned fragments, dead pauses that belong to a removed attempt. Keep complete units; when unsure, don't add the range. FIRST look at the very first and very last rows — the recording's pre-roll and post-roll (see Head & tail); mid-body cleanup alone leaves that junk in.
-3. **Apply them in ONE `cut_narration` call** (`ranges` = the whole list). Do NOT cut one range per call.
+3. **Apply them in ONE `remove_words` call** (`ranges` = the whole list). Do NOT cut one range per call. The receipt is a delta — touched clips, shifted rules, `removedSource` spans — so you do not need to re-read `get_state`.
 4. **Review** — re-read what the viewer will now hear (broken logic, missing context, over/under-cut, wrong order); fix only clear problems, then tell the user what you cleaned up in plain words.
 
-For plain cleanup / de-umming, just run it. For aggressive shortening, restructuring, highlight/short-version, or a generated hook, confirm target length + structure + what to preserve with the user BEFORE step 3.
+For plain cleanup / de-umming, just run it — edits are undoable and are not asked for individually. For aggressive shortening, restructuring, highlight/short-version, or a generated hook, confirm target length + structure + what to preserve with the user BEFORE step 3 (over MCP, ask in your own host's conversation; `ask_user` is Studio Chat only).
 
 ## Core principle
 
@@ -29,7 +40,7 @@ Remove defects without changing meaning; make speech smoother, not harder. Prefe
 ## Edit by complete semantic units
 
 - Move / keep / delete complete sentences, ideas, answers, or steps. Do not cut half a sentence just because a few words match.
-- `read_script` rows are ASR segments, NOT semantic units: one sentence / idea / retake may span several rows, and one row may hold only part of a sentence. Reconstruct the full spoken idea across adjacent rows BEFORE choosing the cut boundary.
+- `get_transcript` segment rows are ASR segments, NOT semantic units: one sentence / idea / retake may span several rows, and one row may hold only part of a sentence. Reconstruct the full spoken idea across adjacent rows BEFORE choosing the cut boundary.
 
 ## Fillers — two tiers
 
@@ -62,17 +73,17 @@ List labels, contrast words, subjects, verbs, and adjacent words are NOT filler 
 
 ## Pauses — tighten, don't erase (the dead-air pass)
 
-- Tightening pauses IS a legitimate pass: collect inter-sentence gaps from the transcript rows (gap = next row's start − this row's end) and remove them with ONE `cut_narration` call, passing the FULL gap ranges plus `keepGapSec` — the tool leaves that much breathing room at each seam. NEVER do the margin arithmetic yourself; your job is choosing WHICH gaps, the tool's job is the boundary math.
+- Tightening pauses IS a legitimate pass, and there are two tools for it. `remove_silence {minimumPauseSec, speechPaddingSec}` analyses the actual audio — no transcript needed — and is the first move when the goal is pacing alone. When WHICH pauses to keep is a judgment about meaning, collect inter-sentence gaps from the transcript rows (gap = next row's start − this row's end) and remove them with ONE `remove_words` call, passing the FULL gap ranges plus `keepGapSec` — the tool leaves that much breathing room at each seam. NEVER do the margin arithmetic yourself; your job is choosing WHICH gaps, the tool's job is the boundary math.
 - Aggressiveness: `keepGapSec` 0.35 is the balanced default; 0.15 only when the user asks for a hard-cut punchy rhythm; 0.6 for calm/narrative pacing. Only touch gaps ≥ ~1.0s — sub-second gaps are natural speech rhythm, not dead air.
 - KEEP intentional pauses — they are content, not defects: the beat before a key point / punchline / reveal, the stop after a rhetorical question, an emotional beat. Read the sentences on both sides of a gap: if the silence serves the delivery, leave it alone.
 - Run the dead-air pass when asked to tighten pacing / remove dead air, or as the LAST step of a full cleanup (after junk/retake/filler cuts — those change the gaps). Don't fold it silently into an unrelated small edit.
-- Still never CREATE a gap on the main track as a pacing device (no source playing = black frame): tightening removes footage, never inserts space. If a beat needs more air than the source has, cover it with a graphic instead.
+- Still never CREATE a gap on the story spine as a pacing device (no source playing = black frame): tightening removes footage, never inserts space. If a beat needs more air than the source has, cover it with a graphic instead.
 
 ## Tasks beyond cleanup (same principles)
 
-- **Highlight / short version / restructure / target-script**: when the task NAMES what to keep, trim to that boundary — start and end at the requested words and drop the off-script head / tail of the segment they sit in; do not over-keep a whole segment for one requested sentence. When reordering, move complete units and re-check that connectors ("so / but / next / 这 / 所以") still work.
+- **Highlight / short version / restructure / target-script**: when the task NAMES what to keep, trim to that boundary — start and end at the requested words and drop the off-script head / tail of the segment they sit in; do not over-keep a whole segment for one requested sentence. When reordering, move complete units (`split_clips` at the boundaries, then `move_clips`) and re-check that connectors ("so / but / next / 这 / 所以") still work.
 - **Confirm first** for aggressive shortening, structural changes, or a generated hook: align target length, structure direction, and what to preserve before editing.
 
 ## After cutting
 
-Re-read what the viewer will now hear: broken logic, missing context, over-deletion, wrong order, delivery too rushed. Fix only clear problems. Captions re-lay automatically from the new timeline — don't hand-fix them for a cut.
+Re-read what the viewer will now hear: broken logic, missing context, over-deletion, wrong order, delivery too rushed. Fix only clear problems — with a forward edit, not `undo`: a wrongly removed span comes back by re-inserting it from the delta's `removedSource`. Captions re-lay automatically from the new timeline — don't hand-fix them for a cut.
