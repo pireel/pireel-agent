@@ -272,5 +272,10 @@ if (checkOnly) {
   await cp(join(root, CODEX, 'skills'), join(root, CLAUDE, 'skills'), { recursive: true });
   await cp(join(root, CODEX, 'assets'), join(root, CLAUDE, 'assets'), { recursive: true });
   await writeFile(join(root, `${CLAUDE}/.claude-plugin/plugin.json`), generated.get(`${CLAUDE}/.claude-plugin/plugin.json`));
+  // A channel publishes exactly two bundles. Anything else under plugins/ is a leftover from a
+  // build under a different id, and a host would happily install it.
+  for (const e of await readdir(join(root, 'plugins'))) {
+    if (`plugins/${e}` !== CODEX && `plugins/${e}` !== CLAUDE) await rm(join(root, 'plugins', e), { recursive: true, force: true });
+  }
   console.log(`[build-channel] built ${channelName} ${version} (${channel.mcpServer} → ${channel.baseUrl})`);
 }
