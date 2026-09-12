@@ -227,6 +227,12 @@ const prose = await renderProse();
 
 if (checkOnly) {
   const problems = [];
+  // Match the write path's cleanup: a channel publishes exactly its two bundles.
+  // Checking expected files alone would silently accept an extra installable plugin.
+  for (const entry of await readdir(join(root, 'plugins'))) {
+    const path = `plugins/${entry}`;
+    if (path !== CODEX && path !== CLAUDE) problems.push(`unexpected: ${path}`);
+  }
   for (const [rel, want] of [...generated, ...prose]) {
     const have = await readFile(join(root, rel), 'utf8').catch(() => null);
     if (have === null) problems.push(`missing: ${rel}`);
