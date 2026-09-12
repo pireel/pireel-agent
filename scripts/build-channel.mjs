@@ -65,6 +65,18 @@ if (typeof version !== 'string' || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
   fail(`package.json version must be plain SemVer X.Y.Z, got ${JSON.stringify(version)}`);
 }
 
+/* The README documents every channel's install commands literally, so the channel rewrite leaves it
+ * alone and the identity guard skips it. That makes a renamed plugin id silently wrong in the one
+ * string a user actually types: of `<id>@<marketplace>`, only the marketplace half is distinctive,
+ * so nothing else would notice. Check every channel, not just the one being built. */
+const readme = await readFile(join(root, 'README.md'), 'utf8');
+for (const [name, entry] of Object.entries(manifest.channels ?? {})) {
+  if (!entry?.marketplace || !entry.pluginName) continue;
+  const wrong = [...readme.matchAll(new RegExp(`([A-Za-z0-9_-]+)@${entry.marketplace}(?![\\w-])`, 'g'))]
+    .find((hit) => hit[1] !== entry.pluginName);
+  if (wrong) fail(`README.md installs ${wrong[0]}, but the ${name} channel publishes ${entry.pluginName}@${entry.marketplace}`);
+}
+
 /* The id the host registers this plugin under. Channels are installed side by side, so their ids
  * must differ: a host that keys plugin identity by name keeps one and drops the other, and the
  * session then talks to whichever environment survived. Production keeps the bare name so installs
