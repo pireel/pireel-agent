@@ -11,7 +11,7 @@ If you are reading this, the Pireel workflow is already available either from th
 
 **If you JUST installed the skill this turn: do NOT stop.** A freshly-installed skill only auto-activates in a *new* session, but this file is already on disk — read it and run the steps below **now, in the same turn**. Never end your turn at "the skill will be available next time" or tell the user to start a new conversation; keep going straight into Step 1.
 
-**Base URL** (`<BASE>` below): `https://pireel.com`, unless the user explicitly asks to run Pireel locally, in which case use their localhost origin (e.g. `http://localhost:3005`). Never substitute the Preview origin while this production plugin is active.
+**Base URL** (`<BASE>` below): `https://pireel.com`, unless the user explicitly asks to run Pireel locally, in which case use their localhost origin (e.g. `http://localhost:3005`). Never substitute another environment's origin while this plugin is active.
 
 **Host gate**: if Pireel MCP tools are already available through the installed Plugin, continue on any supported host. Web/mobile/remote hosts can work with cloud projects, stock media and server-side tools, but cannot read a path on the user's computer or edit its local agent config. A LOCAL desktop/CLI host is required only when registering MCP for a standalone Skill or importing local-file bytes through the helper.
 
@@ -67,7 +67,7 @@ Ask the user how to start, then do it:
 
 **A. From a local video file** (most common). Two ways:
 
-- **Primary — the helper**: `import_media` with NO args → `token` + `base_url` → run `node <helper> --base <base_url> --token <token> /path/to/video.mp4` (bundled at `<pireel-skill-dir>/scripts/import-media.mjs`, or `curl -fsSL <base_url>/import-media.mjs`; install `ffmpeg`/`ffprobe` yourself if missing). Use the returned `base_url` exactly so production connections never fall through to Preview. It uploads the video to the user's Pireel cloud media store (content-addressed; a duplicate is instant), transcribes, and registers a project in one shot — no studio tab required.
+- **Primary — the helper**: `import_media` with NO args → `token` + `base_url` → run `node <helper> --base <base_url> --token <token> /path/to/video.mp4` (bundled at `<pireel-skill-dir>/scripts/import-media.mjs`, or `curl -fsSL <base_url>/import-media.mjs`; install `ffmpeg`/`ffprobe` yourself if missing). Use the returned `base_url` exactly so the upload never falls through to another environment. It uploads the video to the user's Pireel cloud media store (content-addressed; a duplicate is instant), transcribes, and registers a project in one shot — no studio tab required.
 - **Fallback — inject it directly** (helper unavailable, and you drive the browser): start `tab.playwright.waitForEvent('filechooser')`, click `tab.playwright.locator('[data-pireel-video-trigger]')`, then pass the absolute path to the returned chooser's `setFiles(...)`. The studio imports it (device cache + cloud upload) and makes it the main video. Then call `get_transcript`; it returns a stored transcript or transcribes when missing.
 
 Then `get_state` and edit (an empty timeline is not a blocker: place the library footage with `add_clips` role `primary`, then edit it). See the `asset-import` skill for the full transfer matrix.
