@@ -35,7 +35,7 @@ This one skill covers the whole product. Skim the essentials below, then **open 
 | Add a designed graphic component (BYO markup) | `references/compose-blocks.md` |
 | Design or execute a complete first cut / finished video | `references/storyboard-draft.md` |
 
-`references/craft/` holds Pireel's built-in craft skills verbatim — the same playbooks the Studio chat uses and that `list_skills` / `read_skill` serve over MCP. Read the local copy (no round trip); if the MCP server announces a newer workflow baseline than your installed `VERSION`, prefer `read_skill` for the freshest text.
+`references/craft/` holds Pireel's built-in craft skills verbatim — the same playbooks the Studio chat uses and that `list_skills` / `read_skill` serve over MCP. Read the local copy (no round trip); if the MCP server announces a workflow baseline different from your installed `VERSION`, prefer `read_skill` for the freshest text.
 | Add / restyle captions | `references/captions.md` |
 | Export an MP4 | `references/export.md` |
 | Answer pricing / credits / plan / UI questions | `references/product-help.md` |
@@ -49,45 +49,13 @@ The local media import helper lives at `scripts/import-media.mjs` (Node ≥ 20, 
 
 Agent orchestration and every BYO flow run on the user's own agent subscription, not Pireel credits. Pireel bills only media generation (images/video) and the audio/vision pipelines (transcription, visual analysis). Details in `references/product-help.md`.
 
-## Distribution preference and workflow updates
+## Keeping this workflow current
 
-The `VERSION` file next to this SKILL.md is the Pireel **workflow baseline**, not the
-Plugin version. The Plugin has its own SemVer in `.codex-plugin/plugin.json`; never compare
-those two values.
+A Plugin bundle is updated by its host — skip this. You are one if the host reports a Plugin
+identity, or a plugin manifest sits two directories above this SKILL.md.
 
-First determine how this skill was installed. A Plugin bundle has a host-provided Plugin identity
-or a `.codex-plugin/plugin.json` two directories above this SKILL.md. Anything else is standalone.
-
-When this is a **standalone Skill** and the current host can natively install Plugins, migrate to
-the matching-environment Pireel Plugin before editing:
-
-1. If the matching Plugin is already active and exposes the expected MCP server/endpoint, use it
-   immediately. Do not update, register or invoke a duplicate standalone copy.
-2. Otherwise install the Plugin through the host's native Plugin manager, reload/start a new
-   session when the host requires it, authenticate, and verify `get_state` through the exact MCP
-   endpoint for this environment.
-3. Only after that verification succeeds, retire the standalone Skill and any manual MCP entry
-   through the host's normal removal/config flow. Never delete the working standalone connection
-   first. If cleanup needs a user/admin action, request that one action; until then, leave the old
-   copy installed but do not invoke or re-register it.
-4. If Plugin installation is unsupported, unavailable, denied or fails verification, keep the
-   standalone route working and continue with its update path below.
-
-Do not ask the user to choose a distribution. Plugin is the preferred channel whenever the host
-can actually install and load it; standalone remains the compatibility fallback.
-
-On connect, the Pireel MCP server announces its current workflow baseline. Versions are opaque
-release tags — don't order them. If the installed `VERSION` differs, use the current distribution's
-update channel:
-
-- **Plugin bundle:** do **not** run `npx skills`. Use the host's Plugin update/reinstall flow when
-  it is directly available.
-  Otherwise mention once that the Pireel Plugin needs updating, then continue with the installed
-  workflow.
-- **Standalone Skill:** when migration did not complete, run `npx skills update pireel` yourself
-  (fallback:
-  `npx skills add pireel/pireel-agent`) through the host's normal command-approval flow, then
-  re-read the updated files.
-
-After one update attempt, if the values still differ, the update mechanism is unavailable or
-denied, or `VERSION` is missing, mention it once and continue. Don't nag when they match.
+Otherwise the server announces its workflow baseline and the `VERSION` file next to this SKILL.md
+is yours. Both are opaque release tags: compare for equality, never order them. If they differ, run
+`npx skills update pireel` (fallback: `npx skills add pireel/pireel-agent`) through the host's normal
+command-approval flow, then re-read the updated files. After one attempt — or if the mechanism is
+unavailable or `VERSION` is missing — mention it once and continue. Don't nag when they match.

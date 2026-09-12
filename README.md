@@ -15,19 +15,29 @@ In the Codex desktop app, open **Plugins**, install **Pireel Studio** when it is
 available in your plugin directory, then start a new chat. The Plugin bundles the
 Pireel workflow and authenticated MCP connection.
 
-For repository-marketplace testing in Codex CLI:
+For repository-marketplace installation from the CLI:
 
 ```bash
+# Codex
 codex plugin marketplace add https://github.com/pireel/pireel-agent
 codex plugin add pireel@pireel-marketplace
+
+# Claude Code
+claude plugin marketplace add pireel/pireel-agent
+claude plugin install pireel@pireel-marketplace
 ```
 
 To test the unreleased Plugin against the isolated Pireel Preview environment,
 install the repository's `preview` branch as a separate marketplace:
 
 ```bash
+# Codex
 codex plugin marketplace add pireel/pireel-agent --ref preview
 codex plugin add pireel@pireel-preview
+
+# Claude Code
+claude plugin marketplace add pireel/pireel-agent --ref preview
+claude plugin install pireel@pireel-preview
 ```
 
 The Preview plugin registers the independent `pireel-preview` MCP server, so it
@@ -52,16 +62,16 @@ npx skills add pireel/pireel-agent
 The standalone Skill uses the same workflow but registers the Pireel MCP server
 through the host's own MCP configuration.
 
-### Claude Code
+### Connecting the MCP server on its own
 
-You can also connect Claude Code directly:
+If you only want the tools, without the bundled workflow:
 
 ```bash
 claude mcp add --transport http pireel https://pireel.com/api/studio/mcp
 ```
 
-For the full guided editing workflow, install the standalone Pireel Skill with
-`npx skills add`.
+For the full guided editing workflow, install the Plugin above, or the standalone
+Pireel Skill with `npx skills add`.
 
 ## What you can ask
 
@@ -79,7 +89,7 @@ Some preparation tasks can also continue without keeping the Studio tab open.
 ## Update
 
 - **Plugin installation:** update or reinstall Pireel through the host's Plugins
-  manager. The Plugin version is managed independently from the workflow baseline.
+  manager, then start a new chat.
 - **Standalone Skill:** run:
 
 ```bash
@@ -92,31 +102,6 @@ When a standalone user moves to a host that supports Plugins, install and verify
 Pireel Plugin first. Only then retire the standalone Skill and manual MCP registration; never
 remove the working connection before the Plugin endpoint succeeds.
 
-## Release channels
-
-Plugin SemVer and the MCP/Skill workflow baseline are separate. Their only editable source is
-`release/channels.json`; do not hand-edit `plugin.json` or the Skill `VERSION` during a release.
-
-Preview release:
-
-```bash
-node scripts/release-channel.mjs preview \
-  --plugin-version 0.8.0-preview.1 \
-  --workflow-version 2026-08-21.2
-```
-
-Stable promotion (run after the shared workflow has landed on `main`):
-
-```bash
-node scripts/release-channel.mjs production \
-  --plugin-version 0.8.0 \
-  --workflow-version 2026-08-21.2
-```
-
-The script refuses the wrong branch and Preview/stable SemVer mixups, then synchronizes the
-channel manifest, Plugin manifest, and bundled Skill baseline. CI runs the matching `--check`
-command and separately verifies endpoint isolation.
-
 ## Usage and credits
 
 The agent uses your existing AI agent subscription for the editing conversation.
@@ -126,3 +111,5 @@ before they are run.
 ## License
 
 Apache-2.0 — see [LICENSE](./LICENSE). © Pireel.
+
+Maintainers: the release process is documented in [RELEASING.md](./RELEASING.md).
