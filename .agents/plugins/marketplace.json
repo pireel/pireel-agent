@@ -5,10 +5,10 @@
   },
   "plugins": [
     {
-      "name": "pireel",
+      "name": "pireel-preview",
       "source": {
         "source": "local",
-        "path": "./plugins/pireel"
+        "path": "./plugins/pireel-preview"
       },
       "policy": {
         "installation": "AVAILABLE",

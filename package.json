@@ -1,6 +1,6 @@
 {
   "name": "pireel-agent",
-  "version": "0.7.6",
+  "version": "0.7.7",
   "private": true,
   "description": "Source for the Pireel agent plugin. The version above is the only hand-written one: scripts/build-channel.mjs stamps it into every published manifest.",
   "license": "Apache-2.0",

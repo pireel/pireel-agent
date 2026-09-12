@@ -33,6 +33,7 @@
  * what shipped to preview is what ships to production. Pass `--source <ref> --sha <sha>` to record it.
  */
 
+import { existsSync } from 'node:fs';
 import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -64,11 +65,28 @@ if (typeof version !== 'string' || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
   fail(`package.json version must be plain SemVer X.Y.Z, got ${JSON.stringify(version)}`);
 }
 
-const NAME = manifest.pluginName;
-const CODEX = manifest.authoredRoot;
+/* The id the host registers this plugin under. Channels are installed side by side, so their ids
+ * must differ: a host that keys plugin identity by name keeps one and drops the other, and the
+ * session then talks to whichever environment survived. Production keeps the bare name so installs
+ * already out there are untouched. */
+const NAME = channel.pluginName;
+if (!NAME) fail(`channels.${channelName} has no pluginName`);
+const AUTHORED = manifest.authoredRoot;
+const CODEX = `plugins/${NAME}`;
 const CLAUDE = `plugins/${NAME}-claude`;
 const SKILLS = `${CODEX}/skills`;
 const ENDPOINT = `${channel.baseUrl}/api/studio/mcp`;
+
+/* The authored tree is written under the production id; a channel that renames it moves the tree
+ * first so every path below — prose, generated files, the Claude copy — addresses one location.
+ * Re-running on a built tree finds the move already done. */
+if (!checkOnly && CODEX !== AUTHORED && existsSync(join(root, AUTHORED))) {
+  await cp(join(root, AUTHORED), join(root, CODEX), { recursive: true });
+  await rm(join(root, AUTHORED), { recursive: true, force: true });
+}
+if (!existsSync(join(root, CODEX))) {
+  fail(`${CODEX} is missing. This tree is not the ${channelName} build of its source; rebuild with: node scripts/build-channel.mjs ${channelName}`);
+}
 
 /* ── channel identity inside authored prose ──────────────────────────────────────────────────
  * The authored text is written for production. Each rule is anchored; a missing anchor means the
@@ -110,7 +128,7 @@ async function listFiles(dir) {
 /** Read the manifest as authored: strip everything this script stamps, so building an already
  *  built tree reproduces it exactly. A version written here by hand is overwritten, never read —
  *  package.json stays the only source of the number. */
-const GENERATED_KEYS = ['version', 'description', 'homepage', 'mcpServers', 'skills'];
+const GENERATED_KEYS = ['name', 'version', 'description', 'homepage', 'mcpServers', 'skills'];
 const GENERATED_INTERFACE_KEYS = ['displayName', 'shortDescription', 'longDescription', 'websiteURL', 'privacyPolicyURL', 'termsOfServiceURL'];
 const rawPlugin = await readJson(`${CODEX}/.codex-plugin/plugin.json`);
 const authoredPlugin = Object.fromEntries(Object.entries(rawPlugin).filter(([k]) => !GENERATED_KEYS.includes(k)));
@@ -126,6 +144,7 @@ const originHeaders = (host) => ({ 'x-pireel-distribution': 'plugin', 'x-pireel-
 
 /** Codex manifest: authored fields + the channel's identity + the version. */
 const codexPlugin = {
+  name: NAME,
   ...authoredPlugin,
   version,
   description: channel.description,
@@ -253,5 +272,10 @@ if (checkOnly) {
   await cp(join(root, CODEX, 'skills'), join(root, CLAUDE, 'skills'), { recursive: true });
   await cp(join(root, CODEX, 'assets'), join(root, CLAUDE, 'assets'), { recursive: true });
   await writeFile(join(root, `${CLAUDE}/.claude-plugin/plugin.json`), generated.get(`${CLAUDE}/.claude-plugin/plugin.json`));
+  // A channel publishes exactly two bundles. Anything else under plugins/ is a leftover from a
+  // build under a different id, and a host would happily install it.
+  for (const e of await readdir(join(root, 'plugins'))) {
+    if (`plugins/${e}` !== CODEX && `plugins/${e}` !== CLAUDE) await rm(join(root, 'plugins', e), { recursive: true, force: true });
+  }
   console.log(`[build-channel] built ${channelName} ${version} (${channel.mcpServer} → ${channel.baseUrl})`);
 }
