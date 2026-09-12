@@ -73,6 +73,10 @@ jobs:
           TARGET=$(node -e 'process.stdout.write(require("./release/channels.json").channels[process.argv[1]].branch)' "$CHANNEL")
           git checkout -B "release/$CHANNEL" "origin/$TARGET"
           # Take the authored content from the source commit, then build this channel from it.
+          # Clear each path first: `git checkout <sha> -- <path>` overwrites but never deletes, so a
+          # file the source branch removed (a retired script or workflow) would survive on the
+          # published branch and run against a manifest it no longer understands.
+          rm -rf package.json release plugins scripts README.md RELEASING.md .github
           git checkout "$SHA" -- package.json release plugins scripts README.md RELEASING.md .github
           rm -f release/built-from.json
           node scripts/build-channel.mjs "$CHANNEL" --source "$REF_NAME" --sha "$SHA"
