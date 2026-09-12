@@ -1,20 +1,28 @@
 {
-  "production": {
-    "branch": "main",
-    "pluginRoot": "plugins/pireel",
-    "marketplace": "pireel-marketplace",
-    "pluginVersion": "0.7.1",
-    "workflowVersion": "2026-08-22.1",
-    "mcpServer": "pireel",
-    "baseUrl": "https://pireel.com"
-  },
-  "preview": {
-    "branch": "preview",
-    "pluginRoot": "plugins/pireel",
-    "marketplace": "pireel-preview",
-    "pluginVersion": "0.7.1-preview.1",
-    "workflowVersion": "2026-08-22.1",
-    "mcpServer": "pireel-preview",
-    "baseUrl": "https://preview.pireel.com"
+  "pluginName": "pireel",
+  "authoredRoot": "plugins/pireel",
+  "channels": {
+    "production": {
+      "branch": "main",
+      "marketplace": "pireel-marketplace",
+      "mcpServer": "pireel",
+      "baseUrl": "https://pireel.com",
+      "displayName": "Pireel Studio",
+      "marketplaceDisplayName": "Pireel",
+      "description": "Edit multi-source videos and create finished cuts in Pireel Studio from your AI agent.",
+      "shortDescription": "Edit videos from your AI agent",
+      "longDescription": "Connect your AI agent to Pireel Studio for local media import, transcript editing, montage and multi-output variants, designed graphics, captions, themes, framing and local export. Every result remains visible and editable in the Studio timeline."
+    },
+    "preview": {
+      "branch": "preview",
+      "marketplace": "pireel-preview",
+      "mcpServer": "pireel-preview",
+      "baseUrl": "https://preview.pireel.com",
+      "displayName": "Pireel Studio Preview",
+      "marketplaceDisplayName": "Pireel Preview",
+      "description": "Preview Pireel's latest agent workflows for editing multi-source videos and creating finished cuts.",
+      "shortDescription": "Try the latest Pireel agent workflows",
+      "longDescription": "This preview channel connects to Pireel's isolated preview environment and ships the latest workflow before public release. It supports local media import, transcript editing, montage and multi-output variants, designed graphics, captions, themes, framing and local export. Edits remain visible and editable in Pireel Studio Preview."
+    }
   }
 }
