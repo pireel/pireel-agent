@@ -1,5 +1,5 @@
 {
-  "name": "pireel",
+  "name": "pireel-preview",
   "author": {
     "name": "Pireel",
     "url": "https://pireel.com"
@@ -20,7 +20,7 @@
     "claude-code",
     "mcp"
   ],
-  "version": "0.7.6",
+  "version": "0.7.7",
   "description": "Preview Pireel's latest agent workflows for editing multi-source videos and creating finished cuts.",
   "homepage": "https://preview.pireel.com",
   "skills": "./skills/",

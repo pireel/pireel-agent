@@ -11,23 +11,31 @@ is written by hand, and the only hand-written version anywhere is `version` in `
 ```
 develop                                  main / preview
 ─────────────────────────────────────    ────────────────────────────────────────────
-package.json          ← the version      everything from develop, plus:
-release/channels.json ← identities         plugins/pireel/.mcp.json
-plugins/pireel/                            plugins/pireel/.codex-plugin/plugin.json  (stamped)
-  .codex-plugin/plugin.json                plugins/pireel/skills/pireel/VERSION
-    (no version, no URLs)                  plugins/pireel-claude/…                   (Claude Code)
-  skills/  assets/                         .agents/plugins/marketplace.json          (Codex)
-scripts/build-channel.mjs                  .claude-plugin/marketplace.json           (Claude Code)
+package.json          ← the version      everything from develop, renamed to the channel's
+release/channels.json ← identities         plugin id, plus:
+plugins/pireel/                            plugins/<id>/.mcp.json
+  .codex-plugin/plugin.json                plugins/<id>/.codex-plugin/plugin.json    (stamped)
+    (no name, no version, no URLs)         plugins/<id>/skills/pireel/VERSION
+  skills/  assets/                         plugins/<id>-claude/…                     (Claude Code)
+scripts/build-channel.mjs                  .agents/plugins/marketplace.json          (Codex)
+                                           .claude-plugin/marketplace.json           (Claude Code)
                                            skill text worded for that environment
                                            release/built-from.json                   (provenance)
 ```
 
 Two channels, one version. They differ only by **identity**, and every identity file is generated:
 
-| Channel | Branch | Marketplace | MCP server | Base URL |
-|---|---|---|---|---|
-| production | `main` | `pireel-marketplace` | `pireel` | https://pireel.com |
-| preview | `preview` | `pireel-preview` | `pireel-preview` | https://preview.pireel.com |
+| Channel | Branch | Plugin id | Marketplace | MCP server | Base URL |
+|---|---|---|---|---|---|
+| production | `main` | `pireel` | `pireel-marketplace` | `pireel` | https://pireel.com |
+| preview | `preview` | `pireel-preview` | `pireel-preview` | `pireel-preview` | https://preview.pireel.com |
+
+The plugin id is what a host registers the bundle under, and it names the published directory
+(`plugins/<id>/`, `plugins/<id>-claude/`). The two channels must not share it: a host that keys
+plugin identity by name keeps one of two same-named installs and drops the other, so a session ends
+up holding the surviving channel's MCP server. Production keeps the bare name, which leaves installs
+already out there untouched; changing a channel's id makes its existing installs stale and users
+have to reinstall it once.
 
 Two hosts, one plugin. Codex reads `.codex-plugin/plugin.json` with `mcpServers` pointing at
 `./.mcp.json`; Claude Code reads `.claude-plugin/plugin.json` with the server inlined and no Agent

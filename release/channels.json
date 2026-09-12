@@ -1,9 +1,9 @@
 {
-  "pluginName": "pireel",
   "authoredRoot": "plugins/pireel",
   "channels": {
     "production": {
       "branch": "main",
+      "pluginName": "pireel",
       "marketplace": "pireel-marketplace",
       "mcpServer": "pireel",
       "baseUrl": "https://pireel.com",
@@ -15,6 +15,7 @@
     },
     "preview": {
       "branch": "preview",
+      "pluginName": "pireel-preview",
       "marketplace": "pireel-preview",
       "mcpServer": "pireel-preview",
       "baseUrl": "https://preview.pireel.com",

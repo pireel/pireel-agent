@@ -9,8 +9,8 @@
   },
   "plugins": [
     {
-      "name": "pireel",
-      "source": "./plugins/pireel-claude",
+      "name": "pireel-preview",
+      "source": "./plugins/pireel-preview-claude",
       "description": "Preview Pireel's latest agent workflows for editing multi-source videos and creating finished cuts.",
       "category": "productivity",
       "homepage": "https://preview.pireel.com",
