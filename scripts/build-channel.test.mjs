@@ -13,7 +13,7 @@ function run(root, ...args) {
   return { status: result.status, output: result.stdout + result.stderr };
 }
 
-for (const channel of ['production', 'preview']) {
+for (const channel of ['production']) {
   test(`${channel}: check rejects leftover bundles and files without deleting them`, async () => {
     const root = await mkdtemp(join(tmpdir(), 'pireel-build-channel-'));
     try {
@@ -22,8 +22,8 @@ for (const channel of ['production', 'preview']) {
       assert.equal(result.status, 0, result.output);
       result = run(root, channel, '--check');
       assert.equal(result.status, 0, result.output);
-      const name = channel === 'preview' ? 'pireel-preview' : 'pireel';
-      const extra = channel === 'preview' ? 'pireel' : 'pireel-preview';
+      const name = 'pireel';
+      const extra = 'pireel-preview';
       await cp(join(root, 'plugins', name), join(root, 'plugins', extra), { recursive: true });
       await writeFile(join(root, 'plugins', 'leftover.txt'), 'not a published bundle');
       result = run(root, channel, '--check');
@@ -63,6 +63,24 @@ test('local: builds an unpublished channel into --out with its own id and leaves
     // --check rebuilds the same identity, so it needs the same origin
     assert.notEqual(run(root, 'local', '--out', '.local', '--check').status, 0);
     assert.equal(run(root, 'local', '--out', '.local', '--base-url', 'http://localhost:4010', '--check').status, 0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('preview: is never published and builds out of tree under its own id', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'pireel-build-channel-'));
+  try {
+    await cp(source, root, { recursive: true, filter: (path) => !/(?:^|[/\\])(?:\.git|node_modules|\.local)(?:[/\\]|$)/.test(path) });
+    assert.notEqual(run(root, 'preview').status, 0);
+    const result = run(root, 'preview', '--out', '.local/preview');
+    assert.equal(result.status, 0, result.output);
+    const { readFile: read } = await import('node:fs/promises');
+    const mcp = JSON.parse(await read(join(root, '.local/preview/plugins/pireel-preview/.mcp.json'), 'utf8'));
+    assert.equal(mcp.mcpServers['pireel-preview'].url, 'https://preview.pireel.com/api/studio/mcp');
+    const skill = await read(join(root, '.local/preview/plugins/pireel-preview/skills/pireel/SKILL.md'), 'utf8');
+    assert.match(skill, /`pireel-preview` MCP server/);
+    assert.match(skill, /Pireel Preview/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

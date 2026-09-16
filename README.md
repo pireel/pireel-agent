@@ -27,17 +27,21 @@ claude plugin marketplace add pireel/pireel-agent
 claude plugin install pireel@pireel-marketplace
 ```
 
-To test the unreleased Plugin against the isolated Pireel Preview environment,
-install the repository's `preview` branch as a separate marketplace:
+To test unreleased skills against the isolated Pireel Preview environment, build the
+preview plugin locally from this repository — it is never published:
 
 ```bash
+pnpm pack:preview        # → .local/preview/ (marketplace directory) and .local/pireel-preview.plugin (archive)
+
 # Codex
-codex plugin marketplace add pireel/pireel-agent --ref preview
+codex plugin marketplace add "$(pwd)/.local/preview"
 codex plugin add pireel-preview@pireel-preview
 
 # Claude Code
-claude plugin marketplace add pireel/pireel-agent --ref preview
+claude plugin marketplace add "$(pwd)/.local/preview"
 claude plugin install pireel-preview@pireel-preview
+
+# Cowork: add .local/pireel-preview.plugin through "Add a plugin … from a .zip or .plugin archive"
 ```
 
 The Preview plugin registers the independent `pireel-preview` MCP server, so it

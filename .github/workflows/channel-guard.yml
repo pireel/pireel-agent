@@ -1,11 +1,11 @@
 name: channel guard
-# main and preview are published branches: each must be exactly the build output of its channel.
+# main is the published branch: it must be exactly the build output of the production channel.
 # Nothing there is hand-maintained, so this re-runs the build and rejects any difference.
 on:
   push:
-    branches: [main, preview]
+    branches: [main]
   pull_request:
-    branches: [main, preview]
+    branches: [main]
 
 jobs:
   guard:

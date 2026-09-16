@@ -5,13 +5,13 @@
  *
  *   node scripts/build-channel.mjs <production|preview>            write the built files
  *   node scripts/build-channel.mjs <production|preview> --check    fail if the tree is not the build output
- *   node scripts/build-channel.mjs local --out .local              build a maintainer-only local channel
- *                                                                  into a separate directory (source untouched)
+ *   node scripts/pack-channel.mjs <local|preview>                  build a never-published channel out of tree
+ *                                                                  and zip its Claude bundle (see that script)
  *
  * Everything that identifies a channel or carries a version is GENERATED here, so nothing can
  * drift and nothing is hand-maintained twice:
  *
- *   authored (develop)                      generated (main / preview)
+ *   authored (develop)                      generated (main)
  *   ─────────────────────────────────────   ──────────────────────────────────────────────
  *   package.json  ← the only version        plugins/<name>/.codex-plugin/plugin.json   (Codex)
  *   release/channels.json ← identities      plugins/<name>/.mcp.json
@@ -37,11 +37,12 @@
  * exact: `main` can be built from `develop`, or from the very commit `preview` was built from, so
  * what shipped to preview is what ships to production. Pass `--source <ref> --sha <sha>` to record it.
  *
- * The `local` channel is never published: it exists so a maintainer can install the plugin against
- * a local development server under a DIFFERENT id (`pireel-local`) next to the published one. Same-
- * named installs are the failure mode this avoids — the host keeps one and the session talks to the
- * surviving environment. Build it with `--out <dir>` so the authored tree stays as it is;
- * `--base-url <url>` (or PIREEL_LOCAL_BASE_URL) points it at a dev server on another port.
+ * `local` and `preview` are never published (`branch: null`): they exist so a tester can install the
+ * plugin against a dev server or the preview environment under a DIFFERENT id (`pireel-local`,
+ * `pireel-preview`) next to the published one. Same-named installs are the failure mode this
+ * avoids — the host keeps one and the session talks to the surviving environment. They are built
+ * with `--out <dir>` so the authored tree stays as it is; `--base-url <url>` (or PIREEL_LOCAL_BASE_URL
+ * for `local`) points at another origin.
  */
 
 import { existsSync } from 'node:fs';
@@ -87,7 +88,9 @@ if (outDir) {
     await mkdir(root, { recursive: true });
     // Entry by entry: node's cp refuses a destination inside the source, and the out dir usually is.
     for (const entry of await readdir(sourceRoot)) {
-      if (entry === '.git' || entry === 'node_modules' || resolve(sourceRoot, entry) === root) continue;
+      const from = resolve(sourceRoot, entry);
+      // Skip the out dir and anything above it (an `.local` holding several channel builds).
+      if (entry === '.git' || entry === 'node_modules' || from === root || root.startsWith(from + sep)) continue;
       await cp(join(sourceRoot, entry), join(root, entry), { recursive: true });
     }
   }

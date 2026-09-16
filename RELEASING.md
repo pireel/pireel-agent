@@ -5,11 +5,12 @@ is needed to install or use the plugin.
 
 ## The shape of this repo
 
-**`develop` is the source. `main` and `preview` are build outputs.** Nothing on a published branch
-is written by hand, and the only hand-written version anywhere is `version` in `package.json`.
+**`develop` is the source. `main` is the build output.** Nothing on the published branch is
+written by hand, and the only hand-written version anywhere is `version` in `package.json`.
+Preview and local plugins are built on a tester's machine and never published (see below).
 
 ```
-develop                                  main / preview
+develop                                  main
 ─────────────────────────────────────    ────────────────────────────────────────────
 package.json          ← the version      everything from develop, renamed to the channel's
 release/channels.json ← identities         plugin id, plus:
@@ -23,12 +24,13 @@ scripts/build-channel.mjs                  .agents/plugins/marketplace.json     
                                            release/built-from.json                   (provenance)
 ```
 
-Two channels, one version. They differ only by **identity**, and every identity file is generated:
+Three channels, one version, one published branch. They differ only by **identity**, and every
+identity file is generated:
 
 | Channel | Branch | Plugin id | Marketplace | MCP server | Base URL |
 |---|---|---|---|---|---|
 | production | `main` | `pireel` | `pireel-marketplace` | `pireel` | https://pireel.com |
-| preview | `preview` | `pireel-preview` | `pireel-preview` | `pireel-preview` | https://preview.pireel.com |
+| preview | — (never published; `pnpm pack:preview`) | `pireel-preview` | `pireel-preview` | `pireel-preview` | https://preview.pireel.com |
 | local | — (never published) | `pireel-local` | `pireel-local` | `pireel-local` | http://localhost:3005 (`--base-url` / `PIREEL_LOCAL_BASE_URL`) |
 
 The plugin id is what a host registers the bundle under, and it names the published directory
@@ -62,50 +64,34 @@ any client reporting.
 
 1. On `develop`: make the change. If it should reach users as a new version, bump `version` in
    `package.json` — that is the whole version step.
-2. Run the **release a channel** workflow (Actions → *release a channel*), choosing:
-   - `channel`: `preview` or `production`
-   - `source`: `develop`, or `preview` to **promote** what preview already validated
-3. It opens a pull request against that channel's branch. The diff is exactly what publishes.
-   Review it and merge — **merging is the release.**
+2. Test it first against the preview environment: `pnpm pack:preview`, install the archive or the
+   marketplace directory (README), point the preview server at the matching app commit.
+3. Run the **release a channel** workflow (Actions → *release a channel*) with `source: develop`.
+   It opens a pull request against `main`. The diff is exactly what publishes. Review it and
+   merge — **merging is the release.**
 
-Promoting `preview` does not copy preview's files (those carry the preview identity). It reads
-`release/built-from.json`, finds the source commit preview was built from, and rebuilds production
-from that same commit — so production ships the content preview actually validated.
+Nothing pushes to `main` outside this flow; protect the branch and require pull requests.
 
-Nothing pushes to `main` or `preview` outside this flow; protect both branches and require pull
-requests.
+## Testing against preview or a local server
 
-## Testing against a local server
-
-The `local` channel exists for maintainers: it installs the plugin under its own id next to the
-published one, so a test session can never end up talking to production. Same-named installs are
+The `preview` and `local` channels exist for testers: each installs the plugin under its own id next
+to the published one, so a test session can never end up talking to production. Same-named installs are
 exactly how that used to happen — a host keys plugin identity by name, keeps one of two installs,
 and the session inherits the survivor's MCP server.
 
 ```bash
-pnpm build:local                               # → .local/ (git-ignored); the source tree is untouched
-node scripts/build-channel.mjs local --out .local --base-url http://localhost:4010   # another port
+pnpm pack:preview                              # → .local/preview/ and .local/pireel-preview.plugin
+pnpm pack:local                                # → .local/local/   and .local/pireel-local.plugin
+node scripts/pack-channel.mjs local --base-url http://localhost:4010          # another port
 
-# Claude Code
-claude plugin marketplace add "$(pwd)/.local"
-claude plugin install pireel-local@pireel-local
-
-# Codex
-codex plugin marketplace add "$(pwd)/.local"
-codex plugin add pireel-local@pireel-local
+# Claude Code / Codex: the channel directory is a local marketplace
+claude plugin marketplace add "$(pwd)/.local/preview" && claude plugin install pireel-preview@pireel-preview
+codex plugin marketplace add "$(pwd)/.local/local" && codex plugin add pireel-local@pireel-local
 ```
 
-Cowork installs plugins from an archive (`.zip` / `.plugin`) rather than a marketplace:
-
-```bash
-pnpm pack:local                                # → .local/pireel-local.plugin (the Claude bundle, zipped)
-```
-
-Add that file through Cowork's "Add a plugin … from a .zip or .plugin archive". Cowork runs its
-tasks in a sandbox, so `http://localhost:3005` may not reach the dev server from there; if the login
-or the first call fails, expose the dev server (`cloudflared tunnel --url http://localhost:3005`),
-rebuild with `--base-url https://<tunnel-host>`, set `BETTER_AUTH_URL` to the same origin, and pack
-again.
+Cowork installs plugins from an archive (`.zip` / `.plugin`) rather than a marketplace: add the
+`.plugin` file through "Add a plugin … from a .zip or .plugin archive". Its tasks run in a sandbox,
+so the `local` channel's `http://localhost:3005` is not reachable from there — use `preview`.
 
 Start the dev server (`pnpm dev` in the app repo), open a new chat, run `mcp login pireel-local`
 and call `get_state`: the request must show up in the dev server log, and the published `pireel`
@@ -120,19 +106,20 @@ must not reference tools that are not live yet.
 ## Commands
 
 ```bash
-node scripts/build-channel.mjs <production|preview>           # build the channel into this tree
-node scripts/build-channel.mjs <production|preview> --check   # verify this tree IS that build (CI)
+node scripts/build-channel.mjs production            # build the channel into this tree
+node scripts/build-channel.mjs production --check    # verify this tree IS that build (CI)
+node scripts/pack-channel.mjs <preview|local>        # never-published channels, out of tree
 ```
 
 The build is idempotent and reads the version only from `package.json` — a version typed into a
 manifest by hand is overwritten, never honoured. `--check` re-runs the build and rejects any
-difference, which is how `main` and `preview` are held to being pure build output.
+difference, which is how `main` is held to being pure build output.
 
 ## CI
 
-- **channel guard** (push to `main`/`preview`, and PRs into them): re-runs the build for that
-  branch's channel and fails on any difference; then checks the agent-facing skill text names only
-  that environment. (`README.md` documents both channels on purpose and is not scanned.)
+- **channel guard** (push to `main`, and PRs into it): re-runs the production build and fails on
+  any difference; then checks the agent-facing skill text names only that environment.
+  (`README.md` documents every channel on purpose and is not scanned.)
 - **release a channel** (manual): the workflow above.
 
 Note that a pull request opened by the release workflow uses the default `GITHUB_TOKEN`, so its
