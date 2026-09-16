@@ -34,12 +34,12 @@ This one skill covers the whole product. Skim the essentials below, then **open 
 | Add / fit background music, sound effects, per-clip sound, transitions, or beat-aligned cuts | `references/craft/audio-and-music.md` |
 | Add a designed graphic component (BYO markup) | `references/compose-blocks.md` |
 | Design or execute a complete first cut / finished video | `references/storyboard-draft.md` |
-
-`references/craft/` holds Pireel's built-in craft skills verbatim — the same playbooks the Studio chat uses and that `list_skills` / `read_skill` serve over MCP. Read the local copy (no round trip); if the MCP server announces a workflow baseline different from your installed `VERSION`, prefer `read_skill` for the freshest text.
 | Add / restyle captions | `references/captions.md` |
 | Export an MP4 | `references/export.md` |
 | Answer pricing / credits / plan / UI questions | `references/product-help.md` |
 | Recover from a tool error, timeout, or `apply_component` lint rejection | `references/known-errors.md` |
+
+`references/craft/` holds Pireel's built-in craft skills verbatim — the same playbooks the Studio chat uses and that `list_skills` / `read_skill` serve over MCP. Read the local copy (no round trip); if the MCP server announces a workflow baseline different from your installed `VERSION`, prefer `read_skill` for the freshest text.
 
 The local media import helper lives at `scripts/import-media.mjs` (Node ≥ 20, zero dependencies).
 

@@ -69,7 +69,7 @@ If the approved pilot includes generated voiceover, call `generate_speech` with 
 
 When a passage earns a Motion Graphic, decide its real region and what picture it overlays before generation. Pass `atFrame`, `durationFrames`, `placement` and `backdrop` into `compose_component`, generate the component with your own model from the returned `{system, prompt, target}`, then submit it with `apply_component` copying the target unchanged. Do not generate standalone cards and scatter them over an already assembled montage.
 
-For local B-roll, follow `asset-import.md`: the helper streams each file over localhost into the open Studio tab's OPFS, and `add_clips` / `insert_clips` place the registered asset by id without an R2 upload.
+For local B-roll, follow `asset-import.md`: the helper (`--broll`) uploads each file to the user's cloud media store and registers it as a project library asset — no studio tab needs to be open — and `add_clips` / `insert_clips` place the registered asset by id.
 
 ## Review the result as a viewer
 
