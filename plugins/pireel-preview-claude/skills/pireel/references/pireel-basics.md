@@ -99,10 +99,10 @@ Tools are grouped the way the server lists them. Timeline arguments are frames; 
 | Insert and push later material to make room | `insert_clips {clips, atFrame}` |
 | Copy a graphic clip to a new start | `add_clips {duplicate:[{clipId, startFrame}]}` |
 | Move / retime a clip or overlay | `move_clips {items:[{clipId, startFrame, trackId?}]}`; length via `set_clip_properties {durationFrames}` |
-| Remove clips of any kind (leave a gap) | `remove_clips {clipIds}` — several in one call |
-| Remove clips and close the gap | `remove_clips {clipIds, ripple:true}` |
+| Remove clips of any kind | `remove_clips {clipIds}` — several in one call; a story-spine removal closes the spine, other lanes keep their time |
+| Remove a moment from every lane (speech and captions included) and close it | `ripple_delete_ranges {ranges:[[fromFrame, toFrame]]}` |
 | Cut video at a point | `split_clips {items:[{clipId?, atFrame}]}` (omit `clipId` to split the story spine) |
-| Remove a timeline range (any lane, any source) and close it | `ripple_delete_ranges {ranges:[{fromFrame, toFrame}]}` |
+| Remove a timeline range (any lane, any source) and close it | `ripple_delete_ranges {ranges:[[fromFrame, toFrame]]}` (integer frame pairs, half-open) |
 | Trim a clip's head or tail | `set_clip_properties {items:[{clipId, source:[inSec,outSec]}]}` or `ripple_delete_ranges` on the frames to drop |
 | Video framing / zoom / punch-in / corner / split | `set_clip_framing {items:[{clipId, treatment, size?, crop?, scale?, anchorX?, anchorY?}]}` or `{transform, cropInsets}` |
 | Reposition / resize a graphic or text ON SCREEN (into a corner, off the speaker's face) | `set_clip_framing {items:[{clipId, box:{x,y,w,h} \| anchor \| scale}]}` |
@@ -111,7 +111,7 @@ Tools are grouped the way the server lists them. Timeline arguments are frames; 
 | Color-grade a clip | `set_clip_properties {items:[{clipId, filter:{brightness, contrast, saturate}}]}` (1 = untouched) |
 | Slow-mo / speed-up a clip | `set_clip_properties {items:[{clipId, speed}]}` (0.25–4; the spine ripples by default) |
 | Clip sound — quiet or mute a clip's own audio (e.g. B-roll under narration) | `set_clip_properties {items:[{clipId, volumeDb (−60…+20, 0 = source), mute, fades:{in, out} (frames)}]}` |
-| Swap a clip's media, keep its geometry | `set_clip_properties {items:[{clipId, assetId}]}` |
+| Replace what a clip shows, keep its slot (timing, framing, level, links) | `swap_clip_media {clipId, assetId}` |
 | Background music: add / level / trim / fade / remove | `search_assets {scope:"official", kind:"audio", query}` → `add_clips {clips:[{assetId, role:"music", startFrame, source?}]}` → `set_clip_properties {volumeDb, fades}`; remove with `remove_clips` — craft rules in `craft/audio-and-music.md` |
 | Place narration / music / SFX as typed audio clips | `add_clips {role:"narration" \| "music" \| "sfx"}` (omit `trackId` to reuse or create the lane) |
 | Build a montage picture track from your review picks | `inspect_media {mode:"editorial", ids, brief, compareOpenings:true}` → `assemble_from_review {clips:[{assetId, source:[inSec,outSec]}], targetDurationFrames?}` — places your ordered picks exactly as given; the receipt reports coverage, `notes` where a pick disagrees with the review, and `remaining` accepted ranges when short (pick more and call again; nothing is chosen for you). Needs the open tab |

@@ -20,7 +20,7 @@ Only tools explicitly marked `[…CHARGES…]` in their MCP description:
 | Price | $0 | $20/mo · $200/yr | $100/mo · $1,000/yr |
 | Credits | 20 granted daily | 2,000 per 30-day cycle | 10,000 per 30-day cycle |
 | Video generation | — (needs Pro+) | ✓ | ✓ |
-| Export resolution | up to 720p | up to 1080p | up to 1080p |
+| Export | MP4 up to 4K on every plan | MP4 up to 4K | MP4 up to 4K |
 | Model access | standard models | all models | all models |
 | Commercial license | — | ✓ | ✓ |
 
