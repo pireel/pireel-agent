@@ -29,6 +29,7 @@ Two channels, one version. They differ only by **identity**, and every identity 
 |---|---|---|---|---|---|
 | production | `main` | `pireel` | `pireel-marketplace` | `pireel` | https://pireel.com |
 | preview | `preview` | `pireel-preview` | `pireel-preview` | `pireel-preview` | https://preview.pireel.com |
+| local | — (never published) | `pireel-local` | `pireel-local` | `pireel-local` | http://localhost:3005 (`--base-url` / `PIREEL_LOCAL_BASE_URL`) |
 
 The plugin id is what a host registers the bundle under, and it names the published directory
 (`plugins/<id>/`, `plugins/<id>-claude/`). The two channels must not share it: a host that keys
@@ -73,6 +74,31 @@ from that same commit — so production ships the content preview actually valid
 
 Nothing pushes to `main` or `preview` outside this flow; protect both branches and require pull
 requests.
+
+## Testing against a local server
+
+The `local` channel exists for maintainers: it installs the plugin under its own id next to the
+published one, so a test session can never end up talking to production. Same-named installs are
+exactly how that used to happen — a host keys plugin identity by name, keeps one of two installs,
+and the session inherits the survivor's MCP server.
+
+```bash
+pnpm build:local                               # → .local/ (git-ignored); the source tree is untouched
+node scripts/build-channel.mjs local --out .local --base-url http://localhost:4010   # another port
+
+# Claude Code
+claude plugin marketplace add "$(pwd)/.local"
+claude plugin install pireel-local@pireel-local
+
+# Codex
+codex plugin marketplace add "$(pwd)/.local"
+codex plugin add pireel-local@pireel-local
+```
+
+Start the dev server (`pnpm dev` in the app repo), open a new chat, run `mcp login pireel-local`
+and call `get_state`: the request must show up in the dev server log, and the published `pireel`
+plugin keeps working unchanged in the same host. Rebuild after editing skills; the host picks up the
+new files on the next session.
 
 ## Order of operations
 

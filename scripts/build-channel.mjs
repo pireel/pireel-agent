@@ -5,6 +5,8 @@
  *
  *   node scripts/build-channel.mjs <production|preview>            write the built files
  *   node scripts/build-channel.mjs <production|preview> --check    fail if the tree is not the build output
+ *   node scripts/build-channel.mjs local --out .local              build a maintainer-only local channel
+ *                                                                  into a separate directory (source untouched)
  *
  * Everything that identifies a channel or carries a version is GENERATED here, so nothing can
  * drift and nothing is hand-maintained twice:
@@ -34,6 +36,12 @@
  * from. That is provenance, not content (so `--check` ignores it), and it is what makes promoting
  * exact: `main` can be built from `develop`, or from the very commit `preview` was built from, so
  * what shipped to preview is what ships to production. Pass `--source <ref> --sha <sha>` to record it.
+ *
+ * The `local` channel is never published: it exists so a maintainer can install the plugin against
+ * a local development server under a DIFFERENT id (`pireel-local`) next to the published one. Same-
+ * named installs are the failure mode this avoids — the host keeps one and the session talks to the
+ * surviving environment. Build it with `--out <dir>` so the authored tree stays as it is;
+ * `--base-url <url>` (or PIREEL_LOCAL_BASE_URL) points it at a dev server on another port.
  */
 
 import { existsSync } from 'node:fs';
@@ -41,9 +49,10 @@ import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+let root = sourceRoot;
 const args = process.argv.slice(2);
-const FLAGS_WITH_VALUES = ['--source', '--sha'];
+const FLAGS_WITH_VALUES = ['--source', '--sha', '--out', '--base-url'];
 const channelName = args.find((a, i) => !a.startsWith('--') && !FLAGS_WITH_VALUES.includes(args[i - 1]));
 const checkOnly = args.includes('--check');
 function valueAfter(flag) {
@@ -60,7 +69,29 @@ const stringify = (v) => `${JSON.stringify(v, null, 2)}\n`;
 
 const manifest = await readJson('release/channels.json');
 const channel = manifest.channels?.[channelName];
-if (!channel) fail(`Usage: node scripts/build-channel.mjs <${Object.keys(manifest.channels ?? {}).join('|')}> [--check]`);
+if (!channel) fail(`Usage: node scripts/build-channel.mjs <${Object.keys(manifest.channels ?? {}).join('|')}> [--check] [--out <dir>] [--base-url <url>]`);
+if (channel.branch === null && !valueAfter('--out')) fail(`${channelName} is never published: build it into a separate directory with --out <dir>.`);
+const baseUrlOverride = valueAfter('--base-url') ?? (channel.branch === null ? process.env.PIREEL_LOCAL_BASE_URL : undefined);
+if (baseUrlOverride) {
+  if (!/^https?:\/\/[^/\s]+$/.test(baseUrlOverride)) fail(`--base-url must be an origin like http://localhost:3005, got ${JSON.stringify(baseUrlOverride)}`);
+  channel.baseUrl = baseUrlOverride;
+}
+/* --out: build a copy of the authored tree somewhere else (a local channel, or a dry run) and leave
+ * the source directory exactly as it is. */
+const outDir = valueAfter('--out');
+if (outDir) {
+  root = resolve(sourceRoot, outDir);
+  if (root === sourceRoot) fail('--out must name a directory other than the source root');
+  if (!checkOnly) {
+    await rm(root, { recursive: true, force: true });
+    await mkdir(root, { recursive: true });
+    // Entry by entry: node's cp refuses a destination inside the source, and the out dir usually is.
+    for (const entry of await readdir(sourceRoot)) {
+      if (entry === '.git' || entry === 'node_modules' || resolve(sourceRoot, entry) === root) continue;
+      await cp(join(sourceRoot, entry), join(root, entry), { recursive: true });
+    }
+  }
+}
 
 const pkg = await readJson('package.json');
 const version = pkg.version;
@@ -106,11 +137,12 @@ if (!existsSync(join(root, CODEX))) {
 /* ── channel identity inside authored prose ──────────────────────────────────────────────────
  * The authored text is written for production. Each rule is anchored; a missing anchor means the
  * source wording moved and the rule must be updated rather than the output hand-patched. */
+const ENV_NAME = channel.envName ?? channel.displayName;
 const PROSE = channel.baseUrl === 'https://pireel.com' ? [] : [
   { file: `${SKILLS}/pireel/SKILL.md`, must: true, from: 'Edit videos in Pireel Studio through the `pireel` MCP server', to: `Edit videos in ${channel.displayName} through the \`${channel.mcpServer}\` MCP server` },
-  { file: `${SKILLS}/pireel/SKILL.md`, must: true, from: 'install/connect Pireel or edit', to: 'install/connect Pireel Preview or edit' },
-  { file: `${SKILLS}/pireel/SKILL.md`, must: true, from: 'before the first Pireel MCP call', to: 'before the first Pireel Preview MCP call' },
-  { file: `${SKILLS}/pireel/SKILL.md`, must: true, from: "the user's latest project", to: "the user's latest Preview project" },
+  { file: `${SKILLS}/pireel/SKILL.md`, must: true, from: 'install/connect Pireel or edit', to: `install/connect ${ENV_NAME} or edit` },
+  { file: `${SKILLS}/pireel/SKILL.md`, must: true, from: 'before the first Pireel MCP call', to: `before the first ${ENV_NAME} MCP call` },
+  { file: `${SKILLS}/pireel/SKILL.md`, must: true, from: "the user's latest project", to: `the user's latest ${ENV_NAME.replace(/^Pireel /, '')} project` },
   { file: `${SKILLS}/pireel/references/getting-started.md`, must: true, from: 'FIRST-RUN setup for Pireel Studio.', to: `FIRST-RUN setup for ${channel.displayName}.` },
   { file: 'README.md', must: true, from: 'or another compatible AI agent to\n[Pireel Studio](https://pireel.com).', to: `or another compatible AI agent to the\nisolated [${channel.displayName}](${channel.baseUrl}) environment.` },
   { re: /`pireel` MCP server/g, to: `\`${channel.mcpServer}\` MCP server`, skillsOnly: true },
@@ -122,7 +154,7 @@ const PROSE = channel.baseUrl === 'https://pireel.com' ? [] : [
   { re: /\[mcp_servers\.pireel\]/g, to: `[mcp_servers.${channel.mcpServer}]` },
   { re: /--transport http pireel(?![\w-])/g, to: `--transport http ${channel.mcpServer}` },
   { re: /Pireel Studio \(https:\/\//g, to: `${channel.displayName} (https://` },
-  { re: /(?<!preview\.)https:\/\/pireel\.com/g, to: channel.baseUrl },
+  { re: /(?<!preview\.)https:\/\/pireel\.com(?![\w.-])/g, to: channel.baseUrl },
 ];
 /** Docs that describe every channel at once; copied verbatim, never rewritten. */
 const VERBATIM = new Set(['RELEASING.md']);

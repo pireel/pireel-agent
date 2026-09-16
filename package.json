@@ -7,6 +7,8 @@
   "repository": "https://github.com/pireel/pireel-agent",
   "scripts": {
     "build": "node scripts/build-channel.mjs",
-    "check": "node scripts/build-channel.mjs --check"
+    "check": "node scripts/build-channel.mjs --check",
+    "build:local": "node scripts/build-channel.mjs local --out .local",
+    "test": "node --test scripts/build-channel.test.mjs"
   }
 }
