@@ -26,6 +26,9 @@
  *
  * Releasing is: bump `version` in package.json on the source branch, then open a PR to the
  * channel branch whose diff is this build output. `--check` is what CI runs on that branch.
+ * The release branch must start FROM THE CHANNEL BRANCH (worktree on origin/<channel>, replace the
+ * tree with the source branch's files, run this script, commit): the channel branch holds generated
+ * files that every release rewrites, so a branch started from the source tip conflicts with it.
  *
  * A published branch also records `release/built-from.json` — which source commit it was built
  * from. That is provenance, not content (so `--check` ignores it), and it is what makes promoting
