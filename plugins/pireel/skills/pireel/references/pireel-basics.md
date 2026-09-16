@@ -102,7 +102,7 @@ Tools are grouped the way the server lists them. Timeline arguments are frames; 
 | Remove clips of any kind (leave a gap) | `remove_clips {clipIds}` — several in one call |
 | Remove clips and close the gap | `remove_clips {clipIds, ripple:true}` |
 | Cut video at a point | `split_clips {items:[{clipId?, atFrame}]}` (omit `clipId` to split the story spine) |
-| Remove a timeline range (any lane, any source) and close it | `ripple_delete_ranges {ranges:[{fromFrame, toFrame}]}` |
+| Remove a timeline range (any lane, any source) and close it | `ripple_delete_ranges {ranges:[[fromFrame, toFrame]]}` (integer frame pairs, half-open) |
 | Trim a clip's head or tail | `set_clip_properties {items:[{clipId, source:[inSec,outSec]}]}` or `ripple_delete_ranges` on the frames to drop |
 | Video framing / zoom / punch-in / corner / split | `set_clip_framing {items:[{clipId, treatment, size?, crop?, scale?, anchorX?, anchorY?}]}` or `{transform, cropInsets}` |
 | Reposition / resize a graphic or text ON SCREEN (into a corner, off the speaker's face) | `set_clip_framing {items:[{clipId, box:{x,y,w,h} \| anchor \| scale}]}` |
