@@ -9,6 +9,7 @@
     "build": "node scripts/build-channel.mjs",
     "check": "node scripts/build-channel.mjs --check",
     "build:local": "node scripts/build-channel.mjs local --out .local",
+    "pack:local": "node scripts/build-channel.mjs local --out .local && rm -f .local/pireel-local.plugin && (cd .local/plugins/pireel-local-claude && zip -qr ../../pireel-local.plugin . -x '.DS_Store')",
     "test": "node --test scripts/build-channel.test.mjs"
   }
 }

@@ -95,6 +95,18 @@ codex plugin marketplace add "$(pwd)/.local"
 codex plugin add pireel-local@pireel-local
 ```
 
+Cowork installs plugins from an archive (`.zip` / `.plugin`) rather than a marketplace:
+
+```bash
+pnpm pack:local                                # → .local/pireel-local.plugin (the Claude bundle, zipped)
+```
+
+Add that file through Cowork's "Add a plugin … from a .zip or .plugin archive". Cowork runs its
+tasks in a sandbox, so `http://localhost:3005` may not reach the dev server from there; if the login
+or the first call fails, expose the dev server (`cloudflared tunnel --url http://localhost:3005`),
+rebuild with `--base-url https://<tunnel-host>`, set `BETTER_AUTH_URL` to the same origin, and pack
+again.
+
 Start the dev server (`pnpm dev` in the app repo), open a new chat, run `mcp login pireel-local`
 and call `get_state`: the request must show up in the dev server log, and the published `pireel`
 plugin keeps working unchanged in the same host. Rebuild after editing skills; the host picks up the
