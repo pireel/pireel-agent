@@ -27,28 +27,6 @@ claude plugin marketplace add pireel/pireel-agent
 claude plugin install pireel@pireel-marketplace
 ```
 
-To test unreleased skills against the isolated Pireel Preview environment, build the
-preview plugin locally from this repository — it is never published:
-
-```bash
-pnpm pack:preview        # → .local/preview/ (marketplace directory) and .local/pireel-preview.plugin (archive)
-
-# Codex
-codex plugin marketplace add "$(pwd)/.local/preview"
-codex plugin add pireel-preview@pireel-preview
-
-# Claude Code
-claude plugin marketplace add "$(pwd)/.local/preview"
-claude plugin install pireel-preview@pireel-preview
-
-# Cowork: add .local/pireel-preview.plugin through "Add a plugin … from a .zip or .plugin archive"
-```
-
-The Preview plugin registers the independent `pireel-preview` MCP server, so it
-can coexist with a production `pireel` connection without silently routing work
-to the wrong environment. Start a new chat after installing or updating so the
-host loads the new Plugin and MCP configuration.
-
 Then tell your agent:
 
 > Set up Pireel and help me edit my first video.

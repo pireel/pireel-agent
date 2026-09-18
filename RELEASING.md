@@ -65,7 +65,8 @@ any client reporting.
 1. On `develop`: make the change. If it should reach users as a new version, bump `version` in
    `package.json` — that is the whole version step.
 2. Test it first against the preview environment: `pnpm pack:preview`, install the archive or the
-   marketplace directory (README), point the preview server at the matching app commit.
+   marketplace directory (see "Testing against preview or a local server" below), point the preview
+   server at the matching app commit.
 3. Run the **release a channel** workflow (Actions → *release a channel*) with `source: develop`.
    It opens a pull request against `main`. The diff is exactly what publishes. Review it and
    merge — **merging is the release.**
@@ -86,8 +87,16 @@ node scripts/pack-channel.mjs local --base-url http://localhost:4010          # 
 
 # Claude Code / Codex: the channel directory is a local marketplace
 claude plugin marketplace add "$(pwd)/.local/preview" && claude plugin install pireel-preview@pireel-preview
+codex plugin marketplace add "$(pwd)/.local/preview" && codex plugin add pireel-preview@pireel-preview
 codex plugin marketplace add "$(pwd)/.local/local" && codex plugin add pireel-local@pireel-local
 ```
+
+The preview plugin registers its own `pireel-preview` MCP server, so it coexists with a production
+`pireel` install without routing work into the wrong environment. Log in with `claude mcp login
+plugin:pireel-preview:pireel-preview` / `codex mcp login pireel-preview`. A marketplace already
+added from another path is refused and the plugin then installs from a stale cache: run
+`codex plugin remove pireel-preview@pireel-preview` and `codex plugin marketplace remove
+pireel-preview` first. Start a new session after installing or updating.
 
 Cowork installs plugins from an archive (`.zip` / `.plugin`) rather than a marketplace: add the
 `.plugin` file through "Add a plugin … from a .zip or .plugin archive". Its tasks run in a sandbox,
