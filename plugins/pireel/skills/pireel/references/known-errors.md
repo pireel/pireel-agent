@@ -1,6 +1,6 @@
 ---
 name: known-errors
-description: Meaning and recovery steps for common Pireel MCP errors — studio_not_open, studio_tab_closed, tool_timeout, HTTP 401/409, inspect_timeline scene lookups and apply_component lint rejection. Use whenever a Pireel tool call fails, errors, or hangs, before retrying anything.
+description: Meaning and recovery steps for common Pireel MCP errors — studio_not_open, studio_tab_closed, tab_timeout, bridge_send_failed, HTTP 401/409, inspect_timeline scene lookups and apply_component lint rejection. Use whenever a Pireel tool call fails, errors, or hangs, before retrying anything.
 ---
 
 # Known errors and recovery
@@ -19,14 +19,18 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 
 **Recovery**: re-open a tab (`create_browser_handoff` → built-in browser, or ask the user to re-focus theirs). Then — important — call `get_state` before resuming: the interrupted operation may or may not have applied, no delta came back, and the model you patched from earlier deltas is now untrustworthy. Verify what actually landed instead of re-issuing mutations on faith (a repeated cut lands twice).
 
-## `tool_timeout after Ns`
+## `tab_timeout` (with `callId`)
 
-**Meaning**: the bridge gave up waiting for the tab. Instant (badge) operations time out at 60s; slow generation/analysis (card) tools at 600s. A timeout usually means the tab is throttled (backgrounded), the machine is under load, or a genuinely huge job.
+**Meaning**: the bridge stopped waiting for the tab. Instant (badge) operations time out at 60s; slow generation/analysis (card) tools at 600s. The tab may still be working — a timeout is not a failure of the edit. A timeout usually means the tab is throttled (backgrounded), the machine is under load, a genuinely huge job, or the tab's connection dropped mid-call.
 
 **Recovery**:
-1. Ask the user to bring the studio tab to the FOREGROUND (background tabs get throttled by the browser) and keep the machine awake.
-2. Call `get_state` — the operation may have completed after the bridge stopped waiting.
-3. Only then retry, once. For `get_transcript` when it must transcribe, and for `inspect_media` in its `semantic` / `editorial` modes, remember they are minute-scale by design and cached per file — a retry after a real timeout resumes cheaply, but a retry fired at a still-running job just queues noise.
+1. Do not repeat the call. Ask the user to bring the studio tab to the FOREGROUND (background tabs get throttled by the browser) and keep the machine awake.
+2. Call `get_state`. When the tab finishes, the outcome arrives under `lateReceipts` with the same `callId`; if the tab is unreachable, `get_state` answers from the cloud copy (`offline: true`) and still carries any receipts that arrived — the read never depends on the tab.
+3. Only then retry, once, and only if the receipt says the edit did not land.
+
+## `bridge_send_failed`
+
+**Meaning**: an older server build reporting that the tab's connection was dead when the call was sent. Current builds answer `studio_not_open` instead (and route data tools offline). Treat it exactly like `studio_not_open`: the tab needs a refresh or a new `create_browser_handoff`; a refreshed tab is picked up on the next call. For `get_transcript` when it must transcribe, and for `inspect_media` in its `semantic` / `editorial` modes, remember they are minute-scale by design and cached per file — a retry after a real timeout resumes cheaply, but a retry fired at a still-running job just queues noise.
 
 ## `inspect_timeline` / `export` — `Failed to fetch`, or fonts look plain
 
