@@ -33,7 +33,9 @@ MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
   oauth_resource = "<BASE>/api/studio/mcp"
   ```
 
-- **Claude Code**:
+- **Claude Code with the Plugin installed:** the bundled server is registered as `plugin:pireel:pireel` (Claude Code namespaces a Plugin's servers as `plugin:<plugin>:<server>`); nothing to add. Go to Step 2.
+
+- **Claude Code without the Plugin:**
 
   ```bash
   claude mcp add --transport http pireel <BASE>/api/studio/mcp
@@ -46,7 +48,14 @@ MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
 No API keys. The endpoint answers unauthenticated calls with a `WWW-Authenticate` challenge; the MCP client discovers the OAuth flow from it automatically.
 
 - **Codex**: `codex mcp login pireel` opens the browser sign-in; the user logs into their Pireel account and approves.
-- **Claude Code**: the client prompts on first use (or via `/mcp`) — follow the browser flow.
+- **Claude Code**: run the login command yourself — do not wait for a prompt and do not send the user into `/mcp` by hand:
+
+  ```bash
+  claude mcp login plugin:pireel:pireel   # Plugin install
+  claude mcp login pireel                 # standalone `claude mcp add` registration
+  ```
+
+  It opens the browser sign-in; the user logs into their Pireel account and approves. The command needs a terminal: when your shell has no TTY (most agent sandboxes), run the bundled `scripts/login-claude.sh` (it wraps the same command in a pseudo-terminal, in the background, and prints the log path), then watch that log for the authorization URL and open it for the user. `--no-browser` prints the URL instead of opening a browser (SSH / headless; the user pastes the redirect URL back). Success is the line `Authenticated with "plugin:pireel:pireel"` in the output — "Connected" alone is not it.
 
 ## Step 3 — Verify the connection
 

@@ -14,7 +14,7 @@ Pireel Studio (https://pireel.com) is a multi-source, multi-track video editor f
 
 These are your host's own browser-runtime controls, not Pireel MCP tools — use whatever your tool exposes. **On Codex specifically:** drive the in-app browser through the official Browser runtime / Node REPL, navigate with the selected tab's `goto`, make it visible, and follow the runtime's documented keep/finalize behavior. Never use OS `open` or select connected Chrome preemptively.
 
-The MCP endpoint is `https://pireel.com/api/studio/mcp`. Auth is OAuth — the agent's `mcp login` / first-use flow opens the browser; there are no API keys. On HTTP 401, re-run the OAuth login for `pireel`.
+The MCP endpoint is `https://pireel.com/api/studio/mcp`. Auth is OAuth — `codex mcp login pireel` / `claude mcp login plugin:pireel:pireel` opens the browser; there are no API keys. On HTTP 401, re-run that login (`references/getting-started.md`, Step 2).
 
 ## The composition: outputs, typed tracks, clips and components
 

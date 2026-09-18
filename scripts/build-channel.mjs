@@ -154,6 +154,9 @@ const PROSE = channel.baseUrl === 'https://pireel.com' ? [] : [
    * direction, so a rule missing here fails CI rather than shipping a login into the wrong
    * environment. The lookahead keeps `pireel` from matching inside `pireel-preview`. */
   { re: /mcp login pireel(?![\w-])/g, to: `mcp login ${channel.mcpServer}` },
+  /* Claude Code names a Plugin's server plugin:<plugin>:<server>; the login command and the
+   * success line both carry it. */
+  { re: /plugin:pireel:pireel(?![\w-])/g, to: `plugin:${NAME}:${channel.mcpServer}` },
   { re: /\[mcp_servers\.pireel\]/g, to: `[mcp_servers.${channel.mcpServer}]` },
   { re: /--transport http pireel(?![\w-])/g, to: `--transport http ${channel.mcpServer}` },
   { re: /Pireel Studio \(https:\/\//g, to: `${channel.displayName} (https://` },
@@ -161,7 +164,7 @@ const PROSE = channel.baseUrl === 'https://pireel.com' ? [] : [
 ];
 /** Docs that describe every channel at once; copied verbatim, never rewritten. */
 const VERBATIM = new Set(['RELEASING.md']);
-const isText = (p) => /\.(md|mjs|js|json|txt)$/.test(p);
+const isText = (p) => /\.(md|mjs|js|json|txt|sh)$/.test(p);
 
 async function listFiles(dir) {
   const out = [];

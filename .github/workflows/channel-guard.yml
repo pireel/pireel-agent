@@ -77,6 +77,7 @@ jobs:
           const patterns = (c) => [
             [String.raw`\`${esc(c.mcpServer)}\` MCP server`, 'names it as the server to call'],
             [String.raw`mcp login ${esc(c.mcpServer)}(?![\w-])`, 'logs in there'],
+            [String.raw`plugin:${esc(c.pluginName)}:${esc(c.mcpServer)}(?![\w-])`, 'logs in there (Claude Code plugin server)'],
             [String.raw`\[mcp_servers\.${esc(c.mcpServer)}\]`, 'registers it'],
             [String.raw`--transport http ${esc(c.mcpServer)}(?![\w-])`, 'registers it'],
             [String.raw`${esc(c.baseUrl)}/api/studio/mcp`, 'points at its endpoint'],
@@ -88,7 +89,7 @@ jobs:
             for (const e of readdirSync(dir)) {
               const full = join(dir, e);
               if (statSync(full).isDirectory()) walk(full);
-              else if (/\.(md|mjs|js|json|txt)$/.test(e)) files.push(full);
+              else if (/\.(md|mjs|js|json|txt|sh)$/.test(e)) files.push(full);
             }
           };
           for (const plugin of readdirSync('plugins')) {
