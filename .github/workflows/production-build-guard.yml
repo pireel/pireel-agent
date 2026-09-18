@@ -1,0 +1,48 @@
+name: production build guard
+# main is the published branch: it must be exactly the build output of the production channel.
+# Nothing there is hand-maintained, so this re-runs the build and rejects any difference.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: verify the production build
+        run: node scripts/build-channel.mjs production --check
+
+      - name: shipped content that changed must ship as a new version
+        run: |
+          # A host installs by version: publishing changed skills under the version users already
+          # have means they never receive them. Compare against what this branch publishes today.
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "No comparable base commit; skipping."
+            exit 0
+          fi
+          if git diff --quiet "$BASE" HEAD -- plugins ':(exclude)plugins/*/skills/pireel/VERSION'; then
+            echo "Published plugin content unchanged; ok."
+            exit 0
+          fi
+          BASE_VERSION=$(git show "$BASE:package.json" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(String(JSON.parse(s||"{}").version||"")))')
+          HEAD_VERSION=$(node -e 'process.stdout.write(require("./package.json").version)')
+          if [ "$BASE_VERSION" != "$HEAD_VERSION" ]; then
+            echo "Content changed and the version moved $BASE_VERSION -> $HEAD_VERSION; ok."
+            exit 0
+          fi
+          echo "::error::The published plugin changed but the version is still $HEAD_VERSION, so no host will install it."
+          echo "Bump \"version\" in package.json on the source branch and re-run the release workflow."
+          exit 1
