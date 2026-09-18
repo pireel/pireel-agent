@@ -57,6 +57,21 @@ if (has('explain')) {
   console.log(TRANSFER_MATRIX.join('\n'));
   process.exit(0);
 }
+if (has('help') || args.includes('-h')) {
+  console.log(`usage: node import-media.mjs --token <import token> [--base <origin>] [--broll] [--no-transcribe]
+                            [--ffmpeg <path>] [--ffprobe <path>] <file> [<file> …]
+
+  --token <token>     short-lived import token from the \`import_media\` MCP tool (required)
+  --base <origin>     Pireel origin (default: $PIREEL_BASE or https://pireel.com)
+  --broll             register videos as library assets instead of the narrative source
+  --no-transcribe     skip the transcription upload even when ffmpeg is available
+  --ffmpeg/--ffprobe  binaries to use (default: FFMPEG_PATH/FFPROBE_PATH env, then PATH)
+  --explain           print where each asset type is transferred and exit
+
+Transfer matrix:
+${TRANSFER_MATRIX.join('\n')}`);
+  process.exit(0);
+}
 
 const BASE = (opt('base') ?? process.env.PIREEL_BASE ?? 'https://pireel.com').replace(/\/$/, '');
 const CRED = opt('token');

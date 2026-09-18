@@ -11,7 +11,7 @@ If you are reading this, the Pireel workflow is already available either from th
 
 **If you JUST installed the skill this turn: do NOT stop.** A freshly-installed skill only auto-activates in a *new* session, but this file is already on disk — read it and run the steps below **now, in the same turn**. Never end your turn at "the skill will be available next time" or tell the user to start a new conversation; keep going straight into Step 1.
 
-**Base URL** (`<BASE>` below): `https://pireel.com`, unless the user explicitly asks to run Pireel locally, in which case use their localhost origin (e.g. `http://localhost:3005`). Never substitute the Preview origin while this production plugin is active.
+**Base URL** (`<BASE>` below): `https://pireel.com`, unless the user explicitly asks to run Pireel locally, in which case use their localhost origin (e.g. `http://localhost:3005`). Never substitute another environment's origin while this plugin is active.
 
 **Host gate**: if Pireel MCP tools are already available through the installed Plugin, continue on any supported host. Web/mobile/remote hosts can work with cloud projects, stock media and server-side tools, but cannot read a path on the user's computer or edit its local agent config. A LOCAL desktop/CLI host is required only when registering MCP for a standalone Skill or importing local-file bytes through the helper.
 
@@ -21,7 +21,7 @@ If you are reading this, the Pireel workflow is already available either from th
 
 MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
 
-- **Pireel Plugin:** the bundled `.mcp.json` registers the server. If Pireel tools are already available from that Plugin, do not edit agent config and continue to Step 2. If the Plugin is installed but its tools are absent, start a new chat/session once so the host can load the bundle; do not install a second standalone copy to compensate.
+- **Pireel Plugin:** the Plugin carries the server registration. If Pireel tools are already available from that Plugin, do not edit agent config and continue to Step 2. If the Plugin is installed but its tools are absent, start a new chat/session once so the host can load the bundle; do not install a second standalone copy to compensate. How the registration shows up depends on the host: a CLI Plugin install (Codex, Claude Code) exposes the server to that CLI; a desktop app that installs Plugins from an archive (Cowork and similar) supplies the connection through its own connector and the sandbox's CLI sees no server at all — that is normal, not a missing file.
 
 - **Standalone Skill on a Plugin-capable host:** do not treat the existing standalone MCP as the preferred route. Install the matching Pireel Plugin through the host's native Plugin manager, reload when required, authenticate, and verify `get_state` against this exact `<BASE>` endpoint. Only after that succeeds may you retire the standalone Skill/manual MCP entry through the host's supported removal flow. Never remove the working standalone connection before verification. If Plugin installation or verification fails, preserve it and continue below.
 
@@ -33,7 +33,11 @@ MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
   oauth_resource = "<BASE>/api/studio/mcp"
   ```
 
-- **Claude Code**:
+- **Claude Code CLI with the Plugin installed:** the bundled server is registered as `plugin:pireel:pireel` (Claude Code namespaces a Plugin's servers as `plugin:<plugin>:<server>`); nothing to add. Go to Step 2.
+
+- **Desktop app connector (Cowork and similar):** `claude mcp list` in the sandbox is empty and the Plugin directory has no `.mcp.json`. Do not register a standalone copy to compensate and do not run a CLI login: the connection belongs to the host, and the user reconnects or re-authorizes Pireel in the app's connector settings. Go to Step 3 when tools are present.
+
+- **Claude Code without the Plugin:**
 
   ```bash
   claude mcp add --transport http pireel <BASE>/api/studio/mcp
@@ -46,7 +50,15 @@ MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
 No API keys. The endpoint answers unauthenticated calls with a `WWW-Authenticate` challenge; the MCP client discovers the OAuth flow from it automatically.
 
 - **Codex**: `codex mcp login pireel` opens the browser sign-in; the user logs into their Pireel account and approves.
-- **Claude Code**: the client prompts on first use (or via `/mcp`) — follow the browser flow.
+- **Claude Code CLI**: run the login command yourself — do not wait for a prompt and do not send the user into `/mcp` by hand:
+
+  ```bash
+  claude mcp login plugin:pireel:pireel   # Plugin install
+  claude mcp login pireel                 # standalone `claude mcp add` registration
+  ```
+
+  It opens the browser sign-in; the user logs into their Pireel account and approves. The command needs a terminal: when your shell has no TTY (most agent sandboxes), run the bundled `scripts/login-claude.sh [server-name]` (it wraps the same command in a pseudo-terminal, in the background, picks the registered name when none is given, and prints the log path), then watch that log for the authorization URL and open it for the user. `--no-browser` prints the URL instead of opening a browser (SSH / headless; the user pastes the redirect URL back). Success is the line `Authenticated with "<server>"` in the output — "Connected" alone is not it. If the host's policy blocks the login command or reading its log as credential handling, stop and hand the exact command to the user to run in their own terminal; do not work around the block.
+- **Desktop app connector (Cowork and similar)**: there is no CLI login. Ask the user to connect or re-authorize Pireel in the app's connector settings, then continue in a new session.
 
 ## Step 3 — Verify the connection
 
@@ -55,7 +67,7 @@ Call `get_state` and interpret:
 - A live state (canvas, playhead, tracks with clips, asset inventory, outputs list) → the user's studio tab is open and bridged; fully connected.
 - `OFFLINE MODE` state → connected; no tab, but data-level editing works against the user's latest cloud project.
 - `no cloud project` → connected; fresh account. Go to Step 4.
-- HTTP 401 after OAuth → re-run the login flow; the token may not have been granted.
+- HTTP 401 after OAuth → re-run the login flow (CLI hosts) or reconnect the connector (desktop app); the token may not have been granted.
 
 `get_state` is a once-per-session read: every later mutation returns a delta (touched clips, shifted rules, removed clips, caption changes) that you patch into your model. Re-read it only after a switch (`manage_project`), an undo, a rejected call, or when a receipt says the state is stale.
 
@@ -67,7 +79,7 @@ Ask the user how to start, then do it:
 
 **A. From a local video file** (most common). Two ways:
 
-- **Primary — the helper**: `import_media` with NO args → `token` + `base_url` → run `node <helper> --base <base_url> --token <token> /path/to/video.mp4` (bundled at `<pireel-skill-dir>/scripts/import-media.mjs`, or `curl -fsSL <base_url>/import-media.mjs`; install `ffmpeg`/`ffprobe` yourself if missing). Use the returned `base_url` exactly so production connections never fall through to Preview. It uploads the video to the user's Pireel cloud media store (content-addressed; a duplicate is instant), transcribes, and registers a project in one shot — no studio tab required.
+- **Primary — the helper**: `import_media` with NO args → `token` + `base_url` → run `node <helper> --base <base_url> --token <token> /path/to/video.mp4` (bundled at `<pireel-skill-dir>/scripts/import-media.mjs`, or `curl -fsSL <base_url>/import-media.mjs`; install `ffmpeg`/`ffprobe` yourself if missing). Use the returned `base_url` exactly so the upload never falls through to another environment. It uploads the video to the user's Pireel cloud media store (content-addressed; a duplicate is instant), transcribes, and registers a project in one shot — no studio tab required.
 - **Fallback — inject it directly** (helper unavailable, and you drive the browser): start `tab.playwright.waitForEvent('filechooser')`, click `tab.playwright.locator('[data-pireel-video-trigger]')`, then pass the absolute path to the returned chooser's `setFiles(...)`. The studio imports it (device cache + cloud upload) and makes it the main video. Then call `get_transcript`; it returns a stored transcript or transcribes when missing.
 
 Then `get_state` and edit (an empty timeline is not a blocker: place the library footage with `add_clips` role `primary`, then edit it). See the `asset-import` skill for the full transfer matrix.

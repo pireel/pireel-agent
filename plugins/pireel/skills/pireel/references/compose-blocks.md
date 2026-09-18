@@ -64,6 +64,32 @@ already generated Components; only an explicit edit does.
 - Use `get_icons` for semantic/brand SVGs. Do not hand-draw familiar icons or use emoji as substitute art.
 - Keep phone-size legibility and protected subjects ahead of decorative detail.
 
+## Beyond the runtime: bake an external render
+
+The component runtime is a closed HTML document: HTML, CSS (inline SVG, container queries, custom
+properties, theme tokens) and GSAP on the paused timeline `tl`. No scripts, libraries, canvas/WebGL,
+iframes or embedded video — the lint rejects them, and a rejection of that kind is not fixable by
+retrying. Most visual explanation fits inside that boundary; design within it first.
+
+When a visual genuinely needs what the runtime excludes — a 3D object, a particle field, a charting or
+physics library, a shader — render it yourself and bring the result in as footage:
+
+1. Author it in your own renderer (a Hyperframes composition is the natural fit: it uses the same
+   HTML + GSAP grammar and its CLI writes transparency with `hyperframes render <comp> --format webm`;
+   any tool that writes VP9-alpha WebM or ProRes 4444 MOV works). Size the composition to the
+   component's intended **box**, not the full canvas, and give it the exact duration in seconds at the
+   output fps.
+2. Import the file with the local media helper (`references/asset-import.md`, `--broll` mode); it
+   never touches the cloud.
+3. Place the registration with `add_clips {role:"broll", box, startFrame, durationFrames}` using the same
+   frames and box you would have passed to `apply_component`. A boxed clip may sit over other B-roll;
+   a full-frame one over full-frame B-roll is refused, which is another reason to render at box size.
+
+Studio keeps the alpha channel in preview and export. The baked clip is footage, not a Component: it
+has no editable props and no `compose_component {clipId}` path — to change it, re-render and replace
+the clip. Prefer a real Component whenever the runtime can express the idea; a bake is the escape
+hatch, not the default.
+
 ## Lint and visual repair
 
 `apply_component` validates scoped CSS, deterministic animation and the output contract. On rejection,

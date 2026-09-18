@@ -1,6 +1,6 @@
 ---
 name: known-errors
-description: Meaning and recovery steps for common Pireel MCP errors — studio_not_open, studio_tab_closed, tool_timeout, HTTP 401/409, inspect_timeline scene lookups and apply_component lint rejection. Use whenever a Pireel tool call fails, errors, or hangs, before retrying anything.
+description: Meaning and recovery steps for common Pireel MCP errors — studio_not_open, studio_tab_closed, tab_timeout, bridge_send_failed, HTTP 401/409, inspect_timeline scene lookups and apply_component lint rejection. Use whenever a Pireel tool call fails, errors, or hangs, before retrying anything.
 ---
 
 # Known errors and recovery
@@ -19,14 +19,18 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 
 **Recovery**: re-open a tab (`create_browser_handoff` → built-in browser, or ask the user to re-focus theirs). Then — important — call `get_state` before resuming: the interrupted operation may or may not have applied, no delta came back, and the model you patched from earlier deltas is now untrustworthy. Verify what actually landed instead of re-issuing mutations on faith (a repeated cut lands twice).
 
-## `tool_timeout after Ns`
+## `tab_timeout` (with `callId`)
 
-**Meaning**: the bridge gave up waiting for the tab. Instant (badge) operations time out at 60s; slow generation/analysis (card) tools at 600s. A timeout usually means the tab is throttled (backgrounded), the machine is under load, or a genuinely huge job.
+**Meaning**: the bridge stopped waiting for the tab. Instant (badge) operations time out at 60s; slow generation/analysis (card) tools at 600s. The tab may still be working — a timeout is not a failure of the edit. A timeout usually means the tab is throttled (backgrounded), the machine is under load, a genuinely huge job, or the tab's connection dropped mid-call.
 
 **Recovery**:
-1. Ask the user to bring the studio tab to the FOREGROUND (background tabs get throttled by the browser) and keep the machine awake.
-2. Call `get_state` — the operation may have completed after the bridge stopped waiting.
-3. Only then retry, once. For `get_transcript` when it must transcribe, and for `inspect_media` in its `semantic` / `editorial` modes, remember they are minute-scale by design and cached per file — a retry after a real timeout resumes cheaply, but a retry fired at a still-running job just queues noise.
+1. Do not repeat the call. Ask the user to bring the studio tab to the FOREGROUND (background tabs get throttled by the browser) and keep the machine awake.
+2. Call `get_state`. When the tab finishes, the outcome arrives under `lateReceipts` with the same `callId`; if the tab is unreachable, `get_state` answers from the cloud copy (`offline: true`) and still carries any receipts that arrived — the read never depends on the tab.
+3. Only then retry, once, and only if the receipt says the edit did not land.
+
+## `bridge_send_failed`
+
+**Meaning**: an older server build reporting that the tab's connection was dead when the call was sent. Current builds answer `studio_not_open` instead (and route data tools offline). Treat it exactly like `studio_not_open`: the tab needs a refresh or a new `create_browser_handoff`; a refreshed tab is picked up on the next call. For `get_transcript` when it must transcribe, and for `inspect_media` in its `semantic` / `editorial` modes, remember they are minute-scale by design and cached per file — a retry after a real timeout resumes cheaply, but a retry fired at a still-running job just queues noise.
 
 ## `inspect_timeline` / `export` — `Failed to fetch`, or fonts look plain
 
@@ -47,7 +51,7 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 - An MCP tool call returning 401 means the OAuth session is missing or expired. This is transport-level — no tool ran.
 - The local import helper printing `upload rejected` / `register failed: HTTP 401` means its short-lived import token was rejected by the connected environment. Re-calling `import_media` once distinguishes an expired token from an environment/access-gate defect.
 
-**Recovery**: for an MCP 401, re-run the OAuth login (`codex mcp login pireel`, or reconnect the Pireel server in Claude Code). For a helper 401, obtain one fresh token and retry the helper once. If the fresh token also returns 401, stop and report the environment error; do **not** switch to browser DOM injection, invent a direct-upload script, create carrier media, or install a local transcription stack.
+**Recovery**: for an MCP 401, re-run the OAuth login: `codex mcp login pireel` on Codex; `claude mcp login plugin:pireel:pireel` on the Claude Code CLI with the Plugin (`claude mcp login pireel` for a standalone registration; no TTY → the bundled `scripts/login-claude.sh`, see getting-started); on a desktop app connector (Cowork and similar) there is no CLI login — the user reconnects Pireel in the app's connector settings. For a helper 401, obtain one fresh token and retry the helper once. If the fresh token also returns 401, stop and report the environment error; do **not** switch to browser DOM injection, invent a direct-upload script, create carrier media, or install a local transcription stack.
 
 ## `server_misconfigured`
 
@@ -60,6 +64,8 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 **Meaning**: not a failure — the validation loop working as intended. The generated component violated a contract rule (unscoped CSS, scripts, non-deterministic animation, etc.); the response lists the exact issues.
 
 **Recovery**: the failure receipt returns a `clipId` (the id the component clip WILL have). Fix ONLY the listed issues in your generated text, **scope every CSS selector under `#<that clipId>`**, and call `apply_component` again passing that same `clipId` back verbatim (plus the same `atFrame`, `durationFrames` and `placement`). Reusing the id keeps the scope target stable across retries — for a brand-new component, do NOT omit `clipId` on the retry or a fresh id is minted and the scope never matches. Do not regenerate from scratch or change unrelated parts. If issues persist after 2–3 targeted fixes, re-read the `compose_component` contract; last resort, `apply_component {generate:true, instruction}` (charges Pireel credits — say so).
+
+A rejection for `<script>`, an external library, canvas/WebGL, an iframe or embedded video is a boundary, not a bug: the runtime is closed and no retry can pass it. Rebuild the visual in markup, CSS and SVG, or — when the idea truly needs a library — render it outside Studio to a transparent WebM and place it as a boxed B-roll clip (`references/compose-blocks.md`, "Beyond the runtime").
 
 ## Persisted plan tools
 

@@ -6,13 +6,13 @@
  * Agent-driven browsers (headless/embedded) often DISCARD page downloads — the render
  * succeeds but the file evaporates. This sink is the reliable delivery path for that
  * case: it opens a one-shot loopback HTTP receiver, you pass its URL to the
- * `export_video` MCP tool as `sink_url`, and the studio tab PUTs the finished bytes
+ * `export {action:"start"}` MCP tool call as `sink_url`, and the studio tab PUTs the finished bytes
  * here instead. Everything stays on this machine — no cloud upload.
  *
  * Usage:
  *   node export-sink.mjs [--out <dir>] [--base <studio origin>] [--timeout-min <N>]
  *
- * Prints one JSON line with {sink_url} immediately (read it, then call export_video),
+ * Prints one JSON line with {sink_url} immediately (read it, then call `export {action:"start", sink_url}`),
  * then BLOCKS until the file arrives (or the timeout). On success prints
  * {saved, bytes, filename} and exits 0. Run it in the background or a second shell —
  * it must be alive when the export finishes.
@@ -35,10 +35,26 @@ const opt = (name, fallback = null) => {
   const i = args.indexOf(`--${name}`);
   return i >= 0 && args[i + 1] && VALUE_FLAGS.has(`--${name}`) ? args[i + 1] : fallback;
 };
+const USAGE = `usage: node export-sink.mjs [--out <dir>] [--base <studio origin>] [--timeout-min <N>]
+
+Opens a one-shot loopback receiver for a Pireel export. Prints {sink_url} as one JSON line,
+then waits for the studio tab to deliver the file (pass sink_url to \`export {action:"start"}\`).
+  --out <dir>          where the finished file is saved (default: current directory)
+  --base <origin>      studio origin allowed to deliver (default: $PIREEL_BASE or https://pireel.com)
+  --timeout-min <N>    minutes to wait before giving up, at least 1 (default: 30)`;
+if (args.includes('--help') || args.includes('-h')) {
+  console.log(USAGE);
+  process.exit(0);
+}
 
 const OUT_DIR = resolve(opt('out') ?? process.cwd());
 const BASE = (opt('base') ?? process.env.PIREEL_BASE ?? 'https://pireel.com').replace(/\/$/, '');
-const TIMEOUT_MS = Math.max(1, Number(opt('timeout-min') ?? 30)) * 60_000;
+const timeoutMin = Number(opt('timeout-min') ?? 30);
+if (!Number.isFinite(timeoutMin) || timeoutMin < 1) {
+  console.error(`[pireel-sink] --timeout-min must be a number of minutes >= 1 (got ${opt('timeout-min')})`);
+  process.exit(2);
+}
+const TIMEOUT_MS = timeoutMin * 60_000;
 const MAX_BYTES = 8 * 1024 * 1024 * 1024; // 8 GB — far above any real export
 
 await mkdir(OUT_DIR, { recursive: true });
@@ -119,10 +135,10 @@ await new Promise((resolveListen, reject) => {
 });
 const { port } = server.address();
 console.log(JSON.stringify({ sink_url: `http://127.0.0.1:${port}${routePath}`, out_dir: OUT_DIR, timeout_min: TIMEOUT_MS / 60_000 }));
-console.error(`[pireel-sink] waiting for the export (pass sink_url to the export_video MCP tool; ${TIMEOUT_MS / 60_000} min timeout)…`);
+console.error(`[pireel-sink] waiting for the export (pass sink_url to export {action:"start"}; ${TIMEOUT_MS / 60_000} min timeout)…`);
 
 // The listening server holds the event loop open; this is the only other exit path.
 setTimeout(() => {
-  console.error('[pireel-sink] timed out — no export arrived. Start a fresh sink and re-run export_video with the new sink_url.');
+  console.error('[pireel-sink] timed out — no export arrived. Start a fresh sink and re-run export {action:"start"} with the new sink_url.');
   process.exit(1);
 }, TIMEOUT_MS);
