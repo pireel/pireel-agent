@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Build one never-published channel out of tree and zip its Claude bundle into a `.plugin` archive:
+ * Build the preview package out of tree and zip its Claude bundle into a `.plugin` archive:
  *
- *   node scripts/pack-channel.mjs <local|preview> [--base-url <origin>]
+ *   node scripts/pack-channel.mjs preview
  *
  * Output: .local/<channel>/ (the full channel build) and .local/<plugin id>.plugin (the archive a
  * host such as Cowork installs from). Codex and Claude Code can also add .local/<channel> as a
@@ -16,14 +16,18 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
-const channelName = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--base-url');
+if (args.length !== 1 || args[0] !== 'preview') {
+  console.error('Usage: node scripts/pack-channel.mjs preview');
+  process.exit(1);
+}
+const channelName = 'preview';
 const manifest = JSON.parse(await readFile(join(root, 'release/channels.json'), 'utf8'));
 const channel = manifest.channels?.[channelName];
-if (!channel) { console.error(`Usage: node scripts/pack-channel.mjs <${Object.keys(manifest.channels).join('|')}> [--base-url <origin>]`); process.exit(1); }
+if (!channel) { console.error('Missing preview build configuration.'); process.exit(1); }
 if (channel.branch) { console.error(`${channelName} is a published channel; release it through the release workflow instead of packing it.`); process.exit(1); }
 
 const outDir = join('.local', channelName);
-const build = spawnSync(process.execPath, ['scripts/build-channel.mjs', channelName, '--out', outDir, ...args.filter((a, i) => a === '--base-url' || args[i - 1] === '--base-url')], { cwd: root, stdio: 'inherit' });
+const build = spawnSync(process.execPath, ['scripts/build-channel.mjs', channelName, '--out', outDir], { cwd: root, stdio: 'inherit' });
 if (build.status !== 0) process.exit(build.status ?? 1);
 
 const bundle = join(root, outDir, 'plugins', `${channel.pluginName}-claude`);

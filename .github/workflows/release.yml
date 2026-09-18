@@ -1,15 +1,10 @@
-name: release a channel
-# Builds the production channel from a source and opens a pull request against `main`.
-# `main` is never written directly: the PR's diff IS what ships. Preview and local plugins are
-# never published — testers build them with `pnpm pack:preview` / `pnpm pack:local`.
+name: release production
+# Builds the production plugin from a source and opens a pull request against `main`.
+# `main` is never written directly: the PR's diff IS what ships. The preview plugin is
+# never published — testers build it locally with `pnpm pack:preview`.
 on:
   workflow_dispatch:
     inputs:
-      channel:
-        description: Channel to release
-        required: true
-        type: choice
-        options: [production]
       source:
         description: Source branch or commit to build from
         required: true
@@ -36,55 +31,39 @@ jobs:
         env:
           SOURCE: ${{ inputs.source }}
         run: |
-          # If SOURCE is a published channel branch, promote what it was built from.
-          IS_CHANNEL=$(node -e '
-            const c = require("./release/channels.json").channels;
-            process.stdout.write(Object.values(c).some((v) => v.branch === process.argv[1]) ? "yes" : "no");
-          ' "$SOURCE")
-          if [ "$IS_CHANNEL" = "yes" ]; then
-            SHA=$(git show "origin/$SOURCE:release/built-from.json" 2>/dev/null \
-              | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(String(JSON.parse(s||"{}").sha||"")))')
-            if [ -z "$SHA" ]; then
-              echo "::error::$SOURCE has no release/built-from.json; cannot promote it. Release it with this workflow first, or build from develop."
-              exit 1
-            fi
-            REF_NAME=$(git show "origin/$SOURCE:release/built-from.json" \
-              | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(String(JSON.parse(s||"{}").source||"unknown")))')
-            echo "::notice::Promoting $SOURCE — rebuilding from $REF_NAME@$SHA, the commit it was built from."
-          else
-            SHA=$(git rev-parse "origin/$SOURCE")
-            REF_NAME="$SOURCE"
+          # Resolve an authored branch or commit directly; published builds are not source.
+          SHA=$(git rev-parse --verify --end-of-options "refs/remotes/origin/$SOURCE^{commit}" 2>/dev/null \
+            || git rev-parse --verify --end-of-options "$SOURCE^{commit}")
+          if git cat-file -e "$SHA:release/built-from.json" 2>/dev/null; then
+            echo "::error::Build from an authored source branch or commit (normally develop), not a published build."
+            exit 1
           fi
-          git cat-file -e "$SHA^{commit}" || { echo "::error::$SHA is not a commit in this repository"; exit 1; }
+          REF_NAME="$SOURCE"
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
           echo "ref=$REF_NAME" >> "$GITHUB_OUTPUT"
 
-      - name: build the channel
+      - name: build production
         id: build
         env:
-          CHANNEL: ${{ inputs.channel }}
           SHA: ${{ steps.src.outputs.sha }}
           REF_NAME: ${{ steps.src.outputs.ref }}
         run: |
-          TARGET=$(node -e 'process.stdout.write(require("./release/channels.json").channels[process.argv[1]].branch)' "$CHANNEL")
-          git checkout -B "release/$CHANNEL" "origin/$TARGET"
-          # Take the authored content from the source commit, then build this channel from it.
+          git checkout -B release/production origin/main
+          # Take the authored content from the source commit, then build production from it.
           # Clear each path first: `git checkout <sha> -- <path>` overwrites but never deletes, so a
           # file the source branch removed (a retired script or workflow) would survive on the
           # published branch and run against a manifest it no longer understands.
+          # Include the retired maintainer guide so it disappears from main on release.
           rm -rf package.json release plugins scripts README.md RELEASING.md .github
-          git checkout "$SHA" -- package.json release plugins scripts README.md RELEASING.md .github
+          git checkout "$SHA" -- package.json release plugins scripts README.md .github
           rm -f release/built-from.json
-          node scripts/build-channel.mjs "$CHANNEL" --source "$REF_NAME" --sha "$SHA"
-          node scripts/build-channel.mjs "$CHANNEL" --check
-          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+          node scripts/build-channel.mjs production --source "$REF_NAME" --sha "$SHA"
+          node scripts/build-channel.mjs production --check
           echo "version=$(node -e 'process.stdout.write(require("./package.json").version)')" >> "$GITHUB_OUTPUT"
 
       - name: open the release pull request
         env:
           GH_TOKEN: ${{ github.token }}
-          CHANNEL: ${{ inputs.channel }}
-          TARGET: ${{ steps.build.outputs.target }}
           VERSION: ${{ steps.build.outputs.version }}
           REF_NAME: ${{ steps.src.outputs.ref }}
           SHA: ${{ steps.src.outputs.sha }}
@@ -93,17 +72,19 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           if git diff --quiet --cached; then
-            echo "::notice::$TARGET is already the $CHANNEL build of $REF_NAME@$SHA at $VERSION; nothing to release."
+            echo "::notice::main is already the production build of $REF_NAME@$SHA at $VERSION; nothing to release."
             exit 0
           fi
-          git commit -m "release: $CHANNEL $VERSION from $REF_NAME@$SHA"
-          git push -f origin "release/$CHANNEL"
-          BODY=$(printf '%s\n' \
-            "Built by \`scripts/build-channel.mjs $CHANNEL\` from \`$REF_NAME\` at \`$SHA\`." \
-            "" \
-            "The diff is exactly what publishes to the **$CHANNEL** channel; merging is the release." \
-            "Nothing in it is hand-written — to change it, change the source branch and re-run this workflow." \
-            "The version comes from \`package.json\` on the source branch: **$VERSION**.")
-          gh pr create --base "$TARGET" --head "release/$CHANNEL" \
-            --title "release: $CHANNEL $VERSION" --body "$BODY" \
-            || gh pr edit "release/$CHANNEL" --title "release: $CHANNEL $VERSION" --body "$BODY"
+          git commit -m "release: production $VERSION from $REF_NAME@$SHA"
+          git push -f origin "release/production"
+          BODY_FILE=$(mktemp)
+          cat > "$BODY_FILE" <<EOF
+          Built by \`scripts/build-channel.mjs production\` from \`$REF_NAME\` at \`$SHA\`.
+
+          This diff is the production build; merging publishes it to users.
+          To change it, edit the source and re-run this workflow.
+          The version comes from \`package.json\` on the source branch: **$VERSION**.
+          EOF
+          gh pr create --base "main" --head "release/production" \
+            --title "release: production $VERSION" --body-file "$BODY_FILE" \
+            || gh pr edit "release/production" --title "release: production $VERSION" --body-file "$BODY_FILE"

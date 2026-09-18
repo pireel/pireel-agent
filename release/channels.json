@@ -25,19 +25,6 @@
       "shortDescription": "Try the latest Pireel agent workflows",
       "longDescription": "This preview channel connects to Pireel's isolated preview environment and ships the latest workflow before public release. It supports local media import, transcript editing, montage and multi-output variants, designed graphics, captions, themes, framing and local export. Edits remain visible and editable in Pireel Studio Preview.",
       "envName": "Pireel Preview"
-    },
-    "local": {
-      "branch": null,
-      "pluginName": "pireel-local",
-      "marketplace": "pireel-local",
-      "mcpServer": "pireel-local",
-      "baseUrl": "http://localhost:3005",
-      "envName": "Pireel Local",
-      "displayName": "Pireel Studio Local",
-      "marketplaceDisplayName": "Pireel Local",
-      "description": "Pireel Studio against a local development server. Maintainers only; never published.",
-      "shortDescription": "Pireel against a local dev server",
-      "longDescription": "Maintainer build of the Pireel plugin pointed at a local development server. It installs side by side with the published plugin under its own id, so a test session never reaches the production environment."
     }
   }
 }

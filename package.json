@@ -8,7 +8,6 @@
   "scripts": {
     "build": "node scripts/build-channel.mjs",
     "check": "node scripts/build-channel.mjs --check",
-    "pack:local": "node scripts/pack-channel.mjs local",
     "pack:preview": "node scripts/pack-channel.mjs preview",
     "test": "node --test scripts/build-channel.test.mjs"
   }

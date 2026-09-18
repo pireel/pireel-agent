@@ -93,5 +93,3 @@ before they are run.
 ## License
 
 Apache-2.0 — see [LICENSE](./LICENSE). © Pireel.
-
-Maintainers: the release process is documented in [RELEASING.md](./RELEASING.md).

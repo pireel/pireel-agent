@@ -3,9 +3,9 @@
 /**
  * Build the published plugin tree for one channel, from the authored source.
  *
- *   node scripts/build-channel.mjs <production|preview>            write the built files
- *   node scripts/build-channel.mjs <production|preview> --check    fail if the tree is not the build output
- *   node scripts/pack-channel.mjs <local|preview>                  build a never-published channel out of tree
+ *   node scripts/build-channel.mjs production                      write the built files
+ *   node scripts/build-channel.mjs production --check              fail if the tree is not the build output
+ *   node scripts/pack-channel.mjs preview                  build a never-published channel out of tree
  *                                                                  and zip its Claude bundle (see that script)
  *
  * Everything that identifies a channel or carries a version is GENERATED here, so nothing can
@@ -26,23 +26,14 @@
  * `.claude-plugin/plugin.json` with the server inlined and no Agent Plugins `interface` block —
  * so both are produced from the one authored manifest.
  *
- * Releasing is: bump `version` in package.json on the source branch, then open a PR to the
- * channel branch whose diff is this build output. `--check` is what CI runs on that branch.
- * The release branch must start FROM THE CHANNEL BRANCH (worktree on origin/<channel>, replace the
- * tree with the source branch's files, run this script, commit): the channel branch holds generated
- * files that every release rewrites, so a branch started from the source tip conflicts with it.
+ * Releasing builds production from an authored source commit and opens a PR against main.
+ * Start the release branch from origin/main, replace its files with the source, then build:
+ * this keeps the generated files from conflicting with the authored tree.
+ * release/built-from.json records the source ref and SHA for reproducibility; --check ignores it.
  *
- * A published branch also records `release/built-from.json` — which source commit it was built
- * from. That is provenance, not content (so `--check` ignores it), and it is what makes promoting
- * exact: `main` can be built from `develop`, or from the very commit `preview` was built from, so
- * what shipped to preview is what ships to production. Pass `--source <ref> --sha <sha>` to record it.
- *
- * `local` and `preview` are never published (`branch: null`): they exist so a tester can install the
- * plugin against a dev server or the preview environment under a DIFFERENT id (`pireel-local`,
- * `pireel-preview`) next to the published one. Same-named installs are the failure mode this
- * avoids — the host keeps one and the session talks to the surviving environment. They are built
- * with `--out <dir>` so the authored tree stays as it is; `--base-url <url>` (or PIREEL_LOCAL_BASE_URL
- * for `local`) points at another origin.
+ * Preview is never published (`branch: null`). Testers build it with --out under its own
+ * `pireel-preview` identity, alongside production, pointing at https://preview.pireel.com.
+ * The authored source tree stays untouched.
  */
 
 import { existsSync } from 'node:fs';
@@ -53,7 +44,7 @@ import { fileURLToPath } from 'node:url';
 const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 let root = sourceRoot;
 const args = process.argv.slice(2);
-const FLAGS_WITH_VALUES = ['--source', '--sha', '--out', '--base-url'];
+const FLAGS_WITH_VALUES = ['--source', '--sha', '--out'];
 const channelName = args.find((a, i) => !a.startsWith('--') && !FLAGS_WITH_VALUES.includes(args[i - 1]));
 const checkOnly = args.includes('--check');
 function valueAfter(flag) {
@@ -65,19 +56,17 @@ function fail(message) {
   console.error(`[build-channel] ${message}`);
   process.exit(1);
 }
+for (const arg of args) {
+  if (arg.startsWith('--') && arg !== '--check' && !FLAGS_WITH_VALUES.includes(arg)) fail(`Unknown option: ${arg}`);
+}
 const readJson = async (p) => JSON.parse(await readFile(join(root, p), 'utf8'));
 const stringify = (v) => `${JSON.stringify(v, null, 2)}\n`;
 
 const manifest = await readJson('release/channels.json');
 const channel = manifest.channels?.[channelName];
-if (!channel) fail(`Usage: node scripts/build-channel.mjs <${Object.keys(manifest.channels ?? {}).join('|')}> [--check] [--out <dir>] [--base-url <url>]`);
+if (!channel) fail(`Usage: node scripts/build-channel.mjs <${Object.keys(manifest.channels ?? {}).join('|')}> [--check] [--out <dir>]`);
 if (channel.branch === null && !valueAfter('--out')) fail(`${channelName} is never published: build it into a separate directory with --out <dir>.`);
-const baseUrlOverride = valueAfter('--base-url') ?? (channel.branch === null ? process.env.PIREEL_LOCAL_BASE_URL : undefined);
-if (baseUrlOverride) {
-  if (!/^https?:\/\/[^/\s]+$/.test(baseUrlOverride)) fail(`--base-url must be an origin like http://localhost:3005, got ${JSON.stringify(baseUrlOverride)}`);
-  channel.baseUrl = baseUrlOverride;
-}
-/* --out: build a copy of the authored tree somewhere else (a local channel, or a dry run) and leave
+/* --out: build a copy of the authored tree somewhere else (a preview package, or a dry run) and leave
  * the source directory exactly as it is. */
 const outDir = valueAfter('--out');
 if (outDir) {
@@ -102,10 +91,8 @@ if (typeof version !== 'string' || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
   fail(`package.json version must be plain SemVer X.Y.Z, got ${JSON.stringify(version)}`);
 }
 
-/* The README documents every channel's install commands literally, so the channel rewrite leaves it
- * alone and the identity guard skips it. That makes a renamed plugin id silently wrong in the one
- * string a user actually types: of `<id>@<marketplace>`, only the marketplace half is distinctive,
- * so nothing else would notice. Check every channel, not just the one being built. */
+/* The public README documents production installation. Validate any install identifier against
+ * the build identities so a typo cannot silently point users at a different plugin. */
 const readme = await readFile(join(root, 'README.md'), 'utf8');
 for (const [name, entry] of Object.entries(manifest.channels ?? {})) {
   if (!entry?.marketplace || !entry.pluginName) continue;
@@ -149,10 +136,8 @@ const PROSE = channel.baseUrl === 'https://pireel.com' ? [] : [
   { file: `${SKILLS}/pireel/references/getting-started.md`, must: true, from: 'FIRST-RUN setup for Pireel Studio.', to: `FIRST-RUN setup for ${channel.displayName}.` },
   { file: 'README.md', must: true, from: 'or another compatible AI agent to\n[Pireel Studio](https://pireel.com).', to: `or another compatible AI agent to the\nisolated [${channel.displayName}](${channel.baseUrl}) environment.` },
   { re: /`pireel` MCP server/g, to: `\`${channel.mcpServer}\` MCP server`, skillsOnly: true },
-  /* Every place the server name is an identifier the reader types or registers, rather than the
-   * product's name in prose. channel-guard.yml searches for exactly these forms in the other
-   * direction, so a rule missing here fails CI rather than shipping a login into the wrong
-   * environment. The lookahead keeps `pireel` from matching inside `pireel-preview`. */
+  /* Rewrite server identifiers in local test bundles, including login and registration commands.
+   * The lookahead keeps `pireel` from matching inside `pireel-preview`. */
   { re: /mcp login pireel(?![\w-])/g, to: `mcp login ${channel.mcpServer}` },
   /* Claude Code names a Plugin's server plugin:<plugin>:<server>; the login command and the
    * success line both carry it. */
@@ -164,8 +149,6 @@ const PROSE = channel.baseUrl === 'https://pireel.com' ? [] : [
   { re: /Pireel Studio \(https:\/\//g, to: `${channel.displayName} (https://` },
   { re: /(?<!preview\.)https:\/\/pireel\.com(?![\w.-])/g, to: channel.baseUrl },
 ];
-/** Docs that describe every channel at once; copied verbatim, never rewritten. */
-const VERBATIM = new Set(['RELEASING.md']);
 const isText = (p) => /\.(md|mjs|js|json|txt|sh)$/.test(p);
 
 async function listFiles(dir) {
@@ -264,7 +247,7 @@ async function renderProse() {
     .filter((p) => p !== `${SKILLS}/pireel/VERSION`);
   const out = new Map();
   for (const rel of files) {
-    if (!isText(rel) || VERBATIM.has(rel)) continue;
+    if (!isText(rel)) continue;
     const before = await readFile(join(root, rel), 'utf8');
     let after = before;
     for (const rule of PROSE) {
@@ -316,7 +299,7 @@ if (checkOnly) {
     await writeFile(join(root, rel), content);
   }
   // Provenance: which source commit this branch was built from. Lets a later build reproduce the
-  // exact content that was validated on another channel, instead of guessing a ref.
+  // exact source content used by a release, instead of guessing a ref.
   const sourceRef = valueAfter('--source');
   const sourceSha = valueAfter('--sha');
   if (sourceRef || sourceSha) {
