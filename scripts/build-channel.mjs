@@ -157,6 +157,8 @@ const PROSE = channel.baseUrl === 'https://pireel.com' ? [] : [
   /* Claude Code names a Plugin's server plugin:<plugin>:<server>; the login command and the
    * success line both carry it. */
   { re: /plugin:pireel:pireel(?![\w-])/g, to: `plugin:${NAME}:${channel.mcpServer}` },
+  { file: `${SKILLS}/pireel/scripts/login-claude.sh`, must: true, from: 'STANDALONE_SERVER="pireel"', to: `STANDALONE_SERVER="${channel.mcpServer}"` },
+  { file: `${SKILLS}/pireel/scripts/login-claude.sh`, must: true, from: '<BASE>/api/studio/mcp', to: `${channel.baseUrl}/api/studio/mcp` },
   { re: /\[mcp_servers\.pireel\]/g, to: `[mcp_servers.${channel.mcpServer}]` },
   { re: /--transport http pireel(?![\w-])/g, to: `--transport http ${channel.mcpServer}` },
   { re: /Pireel Studio \(https:\/\//g, to: `${channel.displayName} (https://` },

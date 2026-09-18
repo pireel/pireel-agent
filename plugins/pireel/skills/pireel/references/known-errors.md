@@ -51,7 +51,7 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 - An MCP tool call returning 401 means the OAuth session is missing or expired. This is transport-level — no tool ran.
 - The local import helper printing `upload rejected` / `register failed: HTTP 401` means its short-lived import token was rejected by the connected environment. Re-calling `import_media` once distinguishes an expired token from an environment/access-gate defect.
 
-**Recovery**: for an MCP 401, re-run the OAuth login: `codex mcp login pireel` on Codex; `claude mcp login plugin:pireel:pireel` on Claude Code with the Plugin (`claude mcp login pireel` for a standalone registration; no TTY → the bundled `scripts/login-claude.sh`, see getting-started). For a helper 401, obtain one fresh token and retry the helper once. If the fresh token also returns 401, stop and report the environment error; do **not** switch to browser DOM injection, invent a direct-upload script, create carrier media, or install a local transcription stack.
+**Recovery**: for an MCP 401, re-run the OAuth login: `codex mcp login pireel` on Codex; `claude mcp login plugin:pireel:pireel` on the Claude Code CLI with the Plugin (`claude mcp login pireel` for a standalone registration; no TTY → the bundled `scripts/login-claude.sh`, see getting-started); on a desktop app connector (Cowork and similar) there is no CLI login — the user reconnects Pireel in the app's connector settings. For a helper 401, obtain one fresh token and retry the helper once. If the fresh token also returns 401, stop and report the environment error; do **not** switch to browser DOM injection, invent a direct-upload script, create carrier media, or install a local transcription stack.
 
 ## `server_misconfigured`
 

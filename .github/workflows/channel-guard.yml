@@ -78,6 +78,7 @@ jobs:
             [String.raw`\`${esc(c.mcpServer)}\` MCP server`, 'names it as the server to call'],
             [String.raw`mcp login ${esc(c.mcpServer)}(?![\w-])`, 'logs in there'],
             [String.raw`plugin:${esc(c.pluginName)}:${esc(c.mcpServer)}(?![\w-])`, 'logs in there (Claude Code plugin server)'],
+            [String.raw`STANDALONE_SERVER="${esc(c.mcpServer)}"`, 'logs in there (login script)'],
             [String.raw`\[mcp_servers\.${esc(c.mcpServer)}\]`, 'registers it'],
             [String.raw`--transport http ${esc(c.mcpServer)}(?![\w-])`, 'registers it'],
             [String.raw`${esc(c.baseUrl)}/api/studio/mcp`, 'points at its endpoint'],

@@ -21,7 +21,7 @@ If you are reading this, the Pireel workflow is already available either from th
 
 MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
 
-- **Pireel Plugin:** the bundled `.mcp.json` registers the server. If Pireel tools are already available from that Plugin, do not edit agent config and continue to Step 2. If the Plugin is installed but its tools are absent, start a new chat/session once so the host can load the bundle; do not install a second standalone copy to compensate.
+- **Pireel Plugin:** the Plugin carries the server registration. If Pireel tools are already available from that Plugin, do not edit agent config and continue to Step 2. If the Plugin is installed but its tools are absent, start a new chat/session once so the host can load the bundle; do not install a second standalone copy to compensate. How the registration shows up depends on the host: a CLI Plugin install (Codex, Claude Code) exposes the server to that CLI; a desktop app that installs Plugins from an archive (Cowork and similar) supplies the connection through its own connector and the sandbox's CLI sees no server at all — that is normal, not a missing file.
 
 - **Standalone Skill on a Plugin-capable host:** do not treat the existing standalone MCP as the preferred route. Install the matching Pireel Plugin through the host's native Plugin manager, reload when required, authenticate, and verify `get_state` against this exact `<BASE>` endpoint. Only after that succeeds may you retire the standalone Skill/manual MCP entry through the host's supported removal flow. Never remove the working standalone connection before verification. If Plugin installation or verification fails, preserve it and continue below.
 
@@ -33,7 +33,9 @@ MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
   oauth_resource = "<BASE>/api/studio/mcp"
   ```
 
-- **Claude Code with the Plugin installed:** the bundled server is registered as `plugin:pireel:pireel` (Claude Code namespaces a Plugin's servers as `plugin:<plugin>:<server>`); nothing to add. Go to Step 2.
+- **Claude Code CLI with the Plugin installed:** the bundled server is registered as `plugin:pireel:pireel` (Claude Code namespaces a Plugin's servers as `plugin:<plugin>:<server>`); nothing to add. Go to Step 2.
+
+- **Desktop app connector (Cowork and similar):** `claude mcp list` in the sandbox is empty and the Plugin directory has no `.mcp.json`. Do not register a standalone copy to compensate and do not run a CLI login: the connection belongs to the host, and the user reconnects or re-authorizes Pireel in the app's connector settings. Go to Step 3 when tools are present.
 
 - **Claude Code without the Plugin:**
 
@@ -48,14 +50,15 @@ MCP endpoint: `<BASE>/api/studio/mcp` (streamable HTTP, stateless).
 No API keys. The endpoint answers unauthenticated calls with a `WWW-Authenticate` challenge; the MCP client discovers the OAuth flow from it automatically.
 
 - **Codex**: `codex mcp login pireel` opens the browser sign-in; the user logs into their Pireel account and approves.
-- **Claude Code**: run the login command yourself — do not wait for a prompt and do not send the user into `/mcp` by hand:
+- **Claude Code CLI**: run the login command yourself — do not wait for a prompt and do not send the user into `/mcp` by hand:
 
   ```bash
   claude mcp login plugin:pireel:pireel   # Plugin install
   claude mcp login pireel                 # standalone `claude mcp add` registration
   ```
 
-  It opens the browser sign-in; the user logs into their Pireel account and approves. The command needs a terminal: when your shell has no TTY (most agent sandboxes), run the bundled `scripts/login-claude.sh` (it wraps the same command in a pseudo-terminal, in the background, and prints the log path), then watch that log for the authorization URL and open it for the user. `--no-browser` prints the URL instead of opening a browser (SSH / headless; the user pastes the redirect URL back). Success is the line `Authenticated with "plugin:pireel:pireel"` in the output — "Connected" alone is not it.
+  It opens the browser sign-in; the user logs into their Pireel account and approves. The command needs a terminal: when your shell has no TTY (most agent sandboxes), run the bundled `scripts/login-claude.sh [server-name]` (it wraps the same command in a pseudo-terminal, in the background, picks the registered name when none is given, and prints the log path), then watch that log for the authorization URL and open it for the user. `--no-browser` prints the URL instead of opening a browser (SSH / headless; the user pastes the redirect URL back). Success is the line `Authenticated with "<server>"` in the output — "Connected" alone is not it. If the host's policy blocks the login command or reading its log as credential handling, stop and hand the exact command to the user to run in their own terminal; do not work around the block.
+- **Desktop app connector (Cowork and similar)**: there is no CLI login. Ask the user to connect or re-authorize Pireel in the app's connector settings, then continue in a new session.
 
 ## Step 3 — Verify the connection
 
@@ -64,7 +67,7 @@ Call `get_state` and interpret:
 - A live state (canvas, playhead, tracks with clips, asset inventory, outputs list) → the user's studio tab is open and bridged; fully connected.
 - `OFFLINE MODE` state → connected; no tab, but data-level editing works against the user's latest cloud project.
 - `no cloud project` → connected; fresh account. Go to Step 4.
-- HTTP 401 after OAuth → re-run the login flow; the token may not have been granted.
+- HTTP 401 after OAuth → re-run the login flow (CLI hosts) or reconnect the connector (desktop app); the token may not have been granted.
 
 `get_state` is a once-per-session read: every later mutation returns a delta (touched clips, shifted rules, removed clips, caption changes) that you patch into your model. Re-read it only after a switch (`manage_project`), an undo, a rejected call, or when a receipt says the state is stale.
 
