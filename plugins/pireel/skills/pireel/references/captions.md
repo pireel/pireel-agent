@@ -1,6 +1,6 @@
 ---
 name: captions
-description: Managing the subtitle layer in Pireel Studio — set_captions for on/off, the 18 caption style presets (word-emphasis vs line-by-line), position (yPct), size (scale), wording corrections and bilingual translation lines. Use when the user asks to add, remove, restyle, move, resize, correct or translate subtitles/captions on a video.
+description: Managing the subtitle layer in Pireel Studio — set_captions for on/off, the caption look (artistic and basic presets), the independent animation, highlight color and highlighted words, position (yPct), size (scale), wording corrections and bilingual translation lines. Use when the user asks to add, remove, restyle, animate, highlight, move, resize, correct or translate subtitles/captions on a video.
 ---
 
 # Captions
@@ -9,23 +9,48 @@ Captions in Pireel Studio are a **managed caption track** laid from the spoken t
 
 The keyword-slam "花字" effect is a different thing: that is a graphic **component** (BYO flow via `compose_component` → `apply_component`) or a `set_texts` text clip, not the caption layer.
 
+## Reading the current look
+
+`get_state` → the caption track's `captions.style` is `{preset, animation, highlightColor?, yPct, scale, font?}` — the same names `set_captions` takes. Read it before restyling so "make it livelier" or "keep the look, change the motion" starts from what is on screen.
+
 ## Tools
 
 Everything goes through `set_captions`; pass only the fields you mean to change.
 
-- `set_captions {on?, preset?, yPct?, scale?}` — turn captions on/off and/or restyle:
-  - `on` — `true` shows the layer, `false` hides it. Passing `preset` alone enables captions if off.
-  - `preset` — a style id from the catalog below (the same 18 ids `get_state`'s caption catalog lists). Passing it (re)builds the layer from the transcript; ASR runs first automatically if there is no transcript yet (transcription charges). **Never invent an id.**
-  - `yPct` — the caption baseline's distance from the TOP as a percentage. Smaller = higher on screen. Omit to keep current.
-  - `scale` — size multiplier; `1` = the preset's default. Omit to keep current.
-  - Omit `preset` to only reposition/resize the current captions (e.g. "move the subtitles up a bit" → `set_captions {yPct: <smaller>}`; "make them bigger" → `set_captions {scale: 1.2}`).
-- `set_captions {on:false}` — turn the whole layer off. It does not touch graphic or text clips (remove those with `remove_clips`).
-- `set_captions {source}` — pick which transcript feeds the layer: `"auto"` (default), or a `trackId` / `clipId` when several speech-bearing clips exist.
-- `set_captions {corrections}` — fix caption wording by transcript row without touching the spoken audio (a misheard name, a wrong homophone).
-- `set_captions {translations: {lang, items}}` — bilingual subtitles (see below).
-- `set_captions {relayout:true}` — regenerate cue boundaries after a `set_canvas` ratio change or a font change; cuts never need it.
+- `on` — `true` shows the layer, `false` hides it. Passing `preset` alone enables captions if off. ASR runs first automatically if there is no transcript yet (transcription charges).
+- `preset` — the **look** (typography, outline, plate, row layout). The parameter's description lists every current look with a one-line description. **Never invent an id.** Changing the look keeps the current animation.
+- `animation` — the **motion**, independent of the look: `none`, whole-caption entrances (`fade`, `rise`, `pop`, `slide`, `blur`, `typewriter`) and word-timed emphasis (`karaoke`, `underline`, `marker`, `pulse`, `bounce`, `glow`). Changing the animation keeps the look.
+- `highlightColor` — `#RRGGBB` for whatever the animation emphasizes (the karaoke word color, the marker box, the underline, the pulse/bounce/glow word) and the default color of highlighted words. `"animation"` restores the animation's own color.
+- `highlights {items:[{index, text}], color?}` — highlighted words: they stay colored for as long as their caption shows. `index` is the transcript row from `get_transcript` (same numbering as `corrections`), `text` the exact word(s) copied from that row. `color`: `"style"` (default — follows `highlightColor`), a fixed `#RRGGBB`, or `"off"` to clear those words; `clear: true` clears every highlight. A word given its own color keeps it; otherwise it follows the caption style.
+- `yPct` — the caption baseline's distance from the TOP as a percentage. Smaller = higher on screen.
+- `scale` — size multiplier; `1` = the default size.
+- `font` — a font id (`sans` / `serif` / `mono`, a library font, or `preset` to restore the look's own font).
+- `source` — which transcript feeds the layer: `auto` (default), or a `trackId` / `clipId` / `assetId` when several speech-bearing clips exist.
+- `corrections` — fix caption wording by transcript row without touching the spoken audio (a misheard name, a wrong homophone).
+- `translations: {lang, items}` — bilingual subtitles (see below).
+- `relayout: true` — regenerate cue boundaries after a `set_canvas` ratio change or a font change; cuts never need it.
+- `on: false` — turn the whole layer off. It does not touch graphic or text clips (remove those with `remove_clips`).
 
-`get_state` reports the current caption status (on/off, preset, baseline % from top) and the receipt of every `set_captions` call is a delta describing the caption change.
+Examples: "move the subtitles up a bit" → `set_captions {yPct: <smaller>}`; "make them bigger" → `{scale: 1.2}`; "make the spoken word pop" → `{animation: "pulse"}`; "highlight the key numbers" → `get_transcript`, then `{highlights: {items: [{index: 3, text: "3x"}, …]}}`.
+
+The receipt of every `set_captions` call is a delta describing the caption change.
+
+## Looks
+
+**Artistic** looks break each caption into at most two short stacked rows with size, color, plate or tilt contrast — bold, social-first. Because a row holds only a few words, captions change more often.
+
+**Basic** looks keep one clean line per caption — documentary, interview, informational content.
+
+The legacy `em-*` / `ln-*` ids from earlier versions are still accepted so existing projects keep rendering; choose from the current artistic and basic looks for new work.
+
+## Choosing
+
+- Bare "add subtitles" with no style preference → a clean basic look (`style-documentary`), no animation or a quiet `fade`.
+- High-energy talking-head or hook-driven content, or "make the captions pop" → an artistic look, optionally with a word-timed animation.
+- "Highlight the words as I speak" → a word-timed `animation` (`karaoke` is the classic); set `highlightColor` when the user names a color.
+- "Emphasize the important words" → `highlights` on a few words per sentence that carry the point (numbers, names, the claim, a contrast); leave the rest plain.
+- Match the attached frame/theme palette when one exists; content fit beats variety.
+- Caption text follows the VIDEO's spoken language; the translation line is where a second language goes.
 
 ## Bilingual subtitles (translation line)
 
@@ -40,53 +65,15 @@ Notes:
 - Translations attach to the transcript, so cuts/restyles/re-lays keep them; re-transcribing a new file drops them.
 - Clips inserted from another source have their own transcript — read it with `get_transcript {clipId}` and translate it with a second call passing that `clipId`.
 - Fix one line: resend just that `{index, text}`. Remove one: `text: ""`. Remove all: `translations: {clear: true}`.
-- The translation line inherits the caption preset's look (smaller, no per-word animation) — there is no separate style knob for it.
-
-## The 18 presets — two modes
-
-**emphasis (逐词强调)** — the whole line stays on screen; the word currently being spoken is highlighted (color change, underline slide, or box pop). Energetic, spoken-word feel.
-
-| id | look |
-| --- | --- |
-| `em-yellow` | white text, yellow current word, drop shadow (the classic default) |
-| `em-green` | white text, neon-green current word, drop shadow |
-| `em-purple-black` | black bar, white text, purple current word |
-| `em-serif-black` | black bar, serif, teal current word |
-| `em-underline` | black bar, white underline slides under the current word |
-| `em-blue-line` | light bar, dark text, blue underline on the current word |
-| `em-box-purple` | purple bar, dark box pops behind the current word |
-| `em-box-blue` | blue bar, black box pops behind the current word |
-| `em-pink` | pink bar, soft-pink text, current word flips to white |
-| `em-gold-serif` | cream bar, gold serif text, darker-gold current word |
-
-**line (整句字幕)** — clean line-by-line fade-in, no per-word animation. Calm, documentary/informational feel.
-
-| id | look |
-| --- | --- |
-| `ln-clean` | bare white text with shadow, no bar |
-| `ln-black` | black bar, white text |
-| `ln-navy` | navy-gray bar, white serif |
-| `ln-white` | white bar, blue italic text |
-| `ln-orange` | orange bar, bold white text |
-| `ln-yellow` | yellow bar, black text |
-| `ln-red` | red bar, white monospace |
-| `ln-mint` | mint text with shadow, no bar |
-
-## Choosing
-
-- Bare "add subtitles" with no style preference → default to a clean **line** preset (`ln-clean` is the safe pick).
-- High-energy talking-head / hook-driven content, or the user says "highlight the words as I speak" → an **emphasis** preset (`em-yellow` if no color preference).
-- Match the attached frame/theme palette when one exists (e.g. a dark editorial theme pairs with `em-serif-black` or `ln-navy`; a loud commerce theme with `em-box-blue` or `ln-yellow`). Content fit beats variety.
-- User names a color/mood ("yellow captions", "something serif") → pick the preset whose look matches; do not try to restyle beyond the catalog.
-- Caption text follows the VIDEO's spoken language; the translation line is where a second language goes.
+- The translation line has its own simple look, chosen in the editor's caption style panel; `set_captions` does not change it.
 
 ## Position and size
 
 - Default placement is fine for most videos; adjust when captions collide with graphics or the speaker's face (check clip framing — `split-*` and corner treatments change where free space is).
-- "Higher/lower" → nudge `yPct` (smaller = higher). "Bigger/smaller" → `scale` around 1 (e.g. 1.15 / 0.85). These are independent of the preset and of each other.
+- "Higher/lower" → nudge `yPct` (smaller = higher). "Bigger/smaller" → `scale` around 1 (e.g. 1.15 / 0.85). These are independent of the look and of each other.
 - Verify with `inspect_timeline {frames:[…]}` at a spoken moment after restyling or moving; nothing here hears audio, so check legibility over the actual picture.
 
 ## Recovery
 
-- If the user dislikes the result: another `set_captions` with a different preset is the forward edit — cheaper than `undo` (which belongs to the user and may erase their own work) and keeps position tweaks explicit.
+- If the user dislikes the result: another `set_captions` with a different look or animation is the forward edit — cheaper than `undo` (which belongs to the user and may erase their own work).
 - "No captions" / "turn them off" → `set_captions {on:false}`, not `remove_clips`.

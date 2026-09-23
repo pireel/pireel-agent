@@ -137,7 +137,8 @@ Tools are grouped the way the server lists them. Timeline arguments are frames; 
 | New graphic / rewrite a graphic | Decide moment/timing/placement/backdrop → `compose_component` → generate → `apply_component` (fallback: `apply_component {generate:true}`, charges) |
 | Inspect a component's actual HTML/animation | `inspect_media {mode:"component", clipId}` (before precise edits or content questions) |
 | Simple title, hook, label or CTA | `set_texts {items:[{text, startFrame, durationFrames?, preset?, animation?, placement?}]}`; update with `{id, …}` |
-| Subtitles on/off/restyle/move/resize | `set_captions {on?, preset?, yPct?, scale?}` (18 presets); off = `set_captions {on:false}` — see the `captions` skill |
+| Subtitles on/off/restyle/move/resize | `set_captions {on?, preset?, animation?, highlightColor?, yPct?, scale?}` — look and motion are independent; current values in `get_state` captions.style; off = `set_captions {on:false}` — see the `captions` skill |
+| Highlight important caption words | `set_captions {highlights: {items: [{index, text}]}}` — transcript row + exact words from `get_transcript` |
 | Fix caption wording / bilingual line / re-lay after a canvas change | `set_captions {corrections}` / `{translations:{lang, items}}` / `{relayout:true}` |
 | Themes (visual direction) | `manage_frame {action:"list"}` → `{action:"attach", id}` → `{action:"read"}` |
 
