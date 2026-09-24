@@ -115,7 +115,7 @@ Tools are grouped the way the server lists them. Timeline arguments are frames; 
 | Background music: add / level / trim / fade / remove | `search_assets {scope:"official", kind:"audio", query}` → `add_clips {clips:[{assetId, role:"music", startFrame, source?}]}` → `set_clip_properties {volumeDb, fades}`; remove with `remove_clips` — craft rules in `craft/audio-and-music.md` |
 | Place narration / music / SFX as typed audio clips | `add_clips {role:"narration" \| "music" \| "sfx"}` (omit `trackId` to reuse or create the lane) |
 | Build a montage picture track from your review picks | `inspect_media {mode:"editorial", ids, brief, compareOpenings:true}` → `assemble_from_review {clips:[{assetId, source:[inSec,outSec]}], targetDurationFrames?}` — places your ordered picks exactly as given; the receipt reports coverage, `notes` where a pick disagrees with the review, and `remaining` accepted ranges when short (pick more and call again; nothing is chosen for you). Needs the open tab |
-| Transition at a cut between two story-spine clips | `add_transition {atFrame, effect, durationFrames?, direction?}` (`effect:"none"` removes) |
+| Transition (own lane, any frame; spanning a cut hands the footage over there) | `add_transition {atFrame, effect, durationFrames?, direction?}`; change or remove one by `id` from `get_state` transitions (`effect:"none"` removes) |
 | Create / reorder / mute / remove a track | `manage_tracks {action, trackId?, type?, role?, order?, syncLocked?}` |
 | Link clips, or sync camera + external audio by a clap | `manage_clip_links {action:"link" \| "unlink" \| "sync", …}` |
 | Change the canvas ratio or size | `set_canvas {preset \| width, height}`; re-check framing with `inspect_timeline` |

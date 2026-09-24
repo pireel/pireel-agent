@@ -79,7 +79,7 @@ Use the batched tools to cut, place, move, resize, frame, crop, layer and mix re
 frames); `add_clips` / `insert_clips` / `move_clips` for media; `set_clip_framing` / `apply_layout` for
 the picture; `add_clips {role:"music"}` + `set_clip_properties {volumeDb, fades}` / `set_clip_properties
 {volumeDb, mute}` on footage / `add_clips {role:"sfx"}` for sound (craft in `craft/audio-and-music.md`);
-`add_transition` only where a boundary means a change of time, place, chapter or mode; `set_texts` for
+`add_transition` only where a moment means a change of time, place, chapter or mode; `set_texts` for
 titles and labels; `set_captions` for subtitles. Timeline arguments are integer frames at the output fps
 from `get_state`; source and transcript positions are seconds; the tools convert. Let source people,
 products, interfaces and evidence remain primary when they carry the meaning. Do not add layers to meet
