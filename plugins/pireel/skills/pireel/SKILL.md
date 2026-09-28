@@ -32,7 +32,8 @@ This one skill covers the whole product. Skim the essentials below, then **open 
 | Mix several clips into product ads or create multiple editable outputs / variants | `references/montage-variants.md` |
 | Edit footage that has no speech (B-roll, product shots, screen recordings, music-led material) | `references/pireel-basics.md` (clip tools) → `references/craft/montage-edit.md` for a deliberate assembly |
 | Add / fit background music, sound effects, per-clip sound, transitions, or beat-aligned cuts | `references/craft/audio-and-music.md` |
-| Add a designed graphic component (BYO markup) | `references/compose-blocks.md` |
+| Make a video's graphics (titles, cards, numbers, lists, structure) as its own look: one visual system, pieces placed with the speech | `references/craft/video-graphics.md` |
+| Add one designed graphic component (BYO markup) | `references/compose-blocks.md` |
 | Design or execute a complete first cut / finished video | `references/storyboard-draft.md` |
 | Add / restyle captions | `references/captions.md` |
 | Export an MP4 | `references/export.md` |
