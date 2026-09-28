@@ -29,10 +29,13 @@ Then call `compose_component` with those values. It returns the full `{system, p
 themeless visual language and the spoken beats in its window. Generate the answer yourself from that
 contract. No credits are charged here.
 
-New/custom Motion Graphics use the markup contract: one short note, one fenced `html` block and one fenced
-`js` timeline body. Existing registered Components keep their typed JSON props contract. Use
-`format:"kit"` only when intentionally choosing a registered Component; use `format:"html"` for bespoke
-visual explanation. The retrieved Component/pattern candidates are useful landmarks, not a closed menu.
+Prefer the component library: when no Frame is attached and a registered Component carries the moment
+(a number, comparison, steps, checklist, quote, lower third, call to action, countdown, offer, Q&A,
+location, ranking, myth vs fact, chart…), call `compose_component {format:"kit"}` and answer with the
+component and its props. The result is designed, consistent across the video and editable field by
+field. Use `format:"html"` — one short note, one fenced `html` block and one fenced `js` timeline body —
+when no Component fits, or under a Frame, whose composition only bespoke markup can express. The
+retrieved Component/pattern candidates are useful landmarks, not a closed menu.
 
 Submit with `apply_component`, copying the returned target `clipId`, `atFrame`, `durationFrames` and
 `placement` unchanged and adding the complete raw model response as `raw`. The insertion preserves the
@@ -48,8 +51,10 @@ current props/markup are supplied automatically. Apply using the same `clipId` a
 
 Do not regenerate for a pure timeline move or resize: `move_clips` retimes, `set_clip_properties
 {durationFrames}` changes length, `set_clip_framing {box | anchor | scale}` repositions on screen, and
-`apply_layout` arranges several graphic clips with the footage. A later Frame switch does not rewrite
-already generated Components; only an explicit edit does.
+`apply_layout` arranges several graphic clips with the footage. Changing wording or a declared property is
+not a regeneration either: `get_state` lists a component's on-screen text under `component.texts` and its
+properties under `component.props`; `set_clip_properties {texts | props}` rewrites them in place. A later
+Frame switch does not rewrite already generated Components; only an explicit edit does.
 
 ## Design standard
 
