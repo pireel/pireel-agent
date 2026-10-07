@@ -1,6 +1,6 @@
 ---
 name: pireel-basics
-description: Core mental model and tool routing for editing videos in Pireel Studio over MCP. Read this FIRST whenever the user asks to edit, cut, storyboard, illustrate, caption, or theme a Pireel video, or whenever any pireel MCP tool is about to be called for the first time in a session. Covers clips vs components, the two clocks (timeline frames vs source seconds), get_state-once-then-deltas discipline, the BYO-brain generation flow, and which tool handles which request.
+description: Core mental model and tool routing for editing videos in Pireel Studio over MCP. Read this FIRST whenever the user asks to edit, cut, storyboard, illustrate, or caption a Pireel video, or whenever any pireel MCP tool is about to be called for the first time in a session. Covers clips vs components, the two clocks (timeline frames vs source seconds), get_state-once-then-deltas discipline, the BYO-brain generation flow, and which tool handles which request.
 ---
 
 # Pireel Studio basics
@@ -39,7 +39,7 @@ Clips inserted from a **different source file** have their own source clock: the
 
 ## State discipline: get_state once, then patch from deltas
 
-- **Call `get_state` once per session** before your first edit. It returns the canvas, `durationFrames`, playhead, `canGenerate`, the attached frame, every track with its role and clips (`frames:[start,end)`, source seconds, non-default properties only), the asset inventory (`library:true` = not placed yet) and the outputs list. `window` narrows it to tracks and a frame range.
+- **Call `get_state` once per session** before your first edit. It returns the canvas, `durationFrames`, playhead, `canGenerate`, every track with its role and clips (`frames:[start,end)`, source seconds, non-default properties only), the asset inventory (`library:true` = not placed yet) and the outputs list. `window` narrows it to tracks and a frame range.
 - **Every mutation returns a delta** — touched clips, shifted rules `{trackId, fromFrame, byFrames, count}`, `removedClipIds`, `removedSource`, caption changes and notes. Patch your model of the timeline from the delta instead of re-reading. Re-read `get_state` only when a receipt note or an error says the state is stale: after a `manage_project` switch, after `undo`, after a rejected call.
 - The transcript is NOT in `get_state`. When the edit depends on spoken words, fetch it with `get_transcript` (`granularity:"segments"` by default; it returns stored text or transcribes when missing). Don't re-fetch segments after cuts (source clock, remember); only `granularity:"words"` ids shift after `remove_words`.
 - Never invent clip / track / asset ids. Only use ids from `get_state` or a receipt, and pass them back exactly. Clip and track ids are output-local — never carry them across an output or project switch.
@@ -130,7 +130,7 @@ Tools are grouped the way the server lists them. Timeline arguments are frames; 
 | Judgment-based speech cleanup (fillers, retakes, tighten) | `read_skill {id:"speech-cleanup"}` once, then its workflow — or use the `talking-head-cleanup` skill directly |
 | Clean up noisy narration | `denoise_audio {strength}` (0..1, default 0.6; `off:true` removes the pass) |
 
-### Graphics, text, captions and frames
+### Graphics, text, captions and brand
 
 | Request | Tools |
 | --- | --- |
@@ -140,7 +140,7 @@ Tools are grouped the way the server lists them. Timeline arguments are frames; 
 | Subtitles on/off/restyle/move/resize | `set_captions {on?, preset?, animation?, highlightColor?, yPct?, scale?}` — look and motion are independent; current values in `get_state` captions.style; off = `set_captions {on:false}` — see the `captions` skill |
 | Highlight important caption words | `set_captions {highlights: {items: [{index, text}]}}` — transcript row + exact words from `get_transcript` |
 | Fix caption wording / bilingual line / re-lay after a canvas change | `set_captions {corrections}` / `{translations:{lang, items}}` / `{relayout:true}` |
-| Themes (visual direction) | `manage_frame {action:"list"}` → `{action:"attach", id}` → `{action:"read"}` |
+| The creator's brand (how their graphics, captions, covers and sound look) | `read_brand` (no arguments; `no_brand` when none is set — then use default craft) |
 
 ### Generation (charges credits — confirm first)
 
@@ -184,7 +184,7 @@ Over MCP there is no `ask_user` tool (it exists only in Studio Chat): ask in you
 
 - The request is ambiguous or names an element that doesn't exist — ask ONE short clarifying question, don't guess.
 - Aggressive shortening, restructuring, highlight/short-version, or a generated hook — confirm target length, structure, and what to preserve BEFORE cutting.
-- Before a consequential complete *creative* build with no Frame, when the visual direction is genuinely unresolved, inspect the material and recommend 1–2 fitting Frames (`manage_frame {action:"list"}`) plus themeless, then wait for the choice. A Frame is never required to start cutting, placing, framing or mixing; never hold up a small local edit or a speech cleanup on it. If the user said to proceed without asking, pick the strongest direction, name it in one sentence, and continue.
+- Before a consequential complete *creative* build, read the creator's brand with `read_brand`; when it returns `no_brand`, follow default craft. A brand is never required to start cutting, placing, framing or mixing; never hold up a small local edit or a speech cleanup on it.
 - Paid generation (image, video, audio, speech, voice clone/design, hosted component fallback) — propose prompt, model, duration and aspect, and wait for confirmation.
 - PROJECTS (no browser): offline tools act on your ACTIVE project = the most-recently-touched one. `manage_project {scope:"project", action:"list"}` shows all (newest first = active); `{scope:"project", action:"switch", id}` makes a different one active and returns a delta (read the new project with `get_state`); `{scope:"project", action:"create", title?}` starts a fresh empty one (immediately active); `{scope:"project", action:"rename", id, title}` retitles. If `get_state` reports "no cloud project", create one with `manage_project` (or `import_media`) — don't send the user to a browser just to create one.
 - `studio_not_open` / `studio_tab_closed` — first open your own built-in/embedded browser tab. Ask the user only when no embedded browser exists.

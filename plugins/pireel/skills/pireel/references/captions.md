@@ -49,7 +49,7 @@ The legacy `em-*` / `ln-*` ids from earlier versions are still accepted so exist
 - High-energy talking-head or hook-driven content, or "make the captions pop" → an artistic look, optionally with a word-timed animation.
 - "Highlight the words as I speak" → a word-timed `animation` (`karaoke` is the classic); set `highlightColor` when the user names a color.
 - "Emphasize the important words" → `highlights` on a few words per sentence that carry the point (numbers, names, the claim, a contrast); leave the rest plain.
-- Match the attached frame/theme palette when one exists; content fit beats variety.
+- Match the creator's brand caption style (`read_brand`) when one exists; content fit beats variety.
 - Caption text follows the VIDEO's spoken language; the translation line is where a second language goes.
 
 ## Bilingual subtitles (translation line)

@@ -1,6 +1,6 @@
 # The studio UI, as the user sees it
 
-Vocabulary first: **组件 / Component** is Studio's broader extensible visual-element concept. **动态图形 / Motion Graphic** is the primary Component family currently exposed in the UI: kinetic words, one-number reveals, data stories, logo stings, overlays and real-source highlights. Do not treat the two terms as synonyms or assume every future Component is a Motion Graphic. Other user-facing terms: **分镜/场景** (the segments of the visual track — clips over MCP), **取景** (clip framing: full / punch-in / corner / split), **字幕** (global caption presets), **主题** (Frames: professional art directions, not Scene/layout templates; applied through the agent), **素材** (assets: images/videos/Components), **口播稿** (the spoken transcript). Over MCP a Component is a graphic clip on the graphics track.
+Vocabulary first: **组件 / Component** is Studio's broader extensible visual-element concept. **动态图形 / Motion Graphic** is the primary Component family currently exposed in the UI: kinetic words, one-number reveals, data stories, logo stings, overlays and real-source highlights. Do not treat the two terms as synonyms or assume every future Component is a Motion Graphic. Other user-facing terms: **分镜/场景** (the segments of the visual track — clips over MCP), **取景** (clip framing: full / punch-in / corner / split), **字幕** (global caption presets), **我的品牌** (the creator's brand: how their captions, graphics, covers and sound look; agents read it with `read_brand`), **素材** (assets: images/videos/Components), **口播稿** (the spoken transcript). Over MCP a Component is a graphic clip on the graphics track.
 
 ## Layout
 
@@ -36,5 +36,5 @@ Vocabulary first: **组件 / Component** is Studio's broader extensible visual-e
 - Clean up the speech → 字幕稿: select words and delete them, or 口播清理 to shorten pauses and remove fillers in one go. (Agent: `remove_silence`, `remove_words`.)
 - Subtitles → 字幕样式 panel → pick a look and an animation (applies to the whole piece; drag/scale on the canvas adjusts all of them). Emphasize words → select them in 字幕稿 → 高亮, or 自动高亮. (Agent: `set_captions` with `on` / `preset` / `animation` / `highlightColor` / `highlights` / `yPct` / `scale`; captions are one managed object, never individual cues.)
 - Bilingual subtitles → translate from the transcript editor (字幕稿), style the second line in 字幕样式 → 副字幕: pick a target language and Pireel's own LLM translates (charges credits); or ask the agent to translate itself (free, `set_captions {translations}`) — either way the translation line appears under the captions.
-- Change the whole look → ask the agent to apply a Frame (`manage_frame`).
+- Change the whole look → set up or edit 我的品牌 (the creator's brand); the agent reads it with `read_brand`.
 - Get the final file → 导出 in the header (or ask the agent: `export {action:"start"}` then `export {action:"status"}`).

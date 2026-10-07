@@ -5,7 +5,7 @@ description: FIRST-RUN setup for Pireel Studio. Run this whenever the user asks 
 
 # Getting started with Pireel Studio
 
-Pireel Studio (https://pireel.com) is a multi-source AI video editor for producing one or more independently editable cuts. Through the `pireel` MCP server your tools edit the composition **live in a studio browser tab**: transcript-based cutting, montage, storyboarding, designed graphics, subtitles, themes and local media import.
+Pireel Studio (https://pireel.com) is a multi-source AI video editor for producing one or more independently editable cuts. Through the `pireel` MCP server your tools edit the composition **live in a studio browser tab**: transcript-based cutting, montage, storyboarding, designed graphics, subtitles and local media import.
 
 If you are reading this, the Pireel workflow is already available either from the Pireel Plugin or as a standalone Skill. This connects the MCP server when needed and gets the user to their first edit. Complete **ALL steps in order** — setup is incomplete until you print the self-report in the final step.
 

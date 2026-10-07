@@ -89,7 +89,7 @@ A rejection for `<script>`, an external library, canvas/WebGL, an iframe or embe
 
 **Meaning**: a tool name or argument shape that doesn't exist on this server.
 
-**Recovery**: re-check the tool list (`tools/list`); do not invent tools or parameters. Ids for clips/tracks/frames/presets must come from `get_state`, tool receipts, `manage_frame {action:"list"}`, or the caption catalog — a made-up id fails inside the tool instead. Timeline positions are integer frames, source positions seconds — a seconds value in a frame field is an invalid-params error, not a rounding issue.
+**Recovery**: re-check the tool list (`tools/list`); do not invent tools or parameters. Ids for clips/tracks/presets must come from `get_state`, tool receipts, or the caption catalog — a made-up id fails inside the tool instead. Timeline positions are integer frames, source positions seconds — a seconds value in a frame field is an invalid-params error, not a rounding issue.
 
 ## General rules
 

@@ -1,6 +1,6 @@
 ---
 name: montage-variants
-description: Use when several local or library clips should become a deliberate montage, product ad, social short, or multiple independently editable versions. Covers discovery questions, Frame choice, source-span selection, output topology, pilot-first production, and the minimum creative bar beyond simple concatenation.
+description: Use when several local or library clips should become a deliberate montage, product ad, social short, or multiple independently editable versions. Covers discovery questions, visual system, source-span selection, output topology, pilot-first production, and the minimum creative bar beyond simple concatenation.
 ---
 
 # Montage and multiple variants
@@ -23,7 +23,7 @@ Ask only one blocking decision at a time. Do not pair a bounded choice with a se
 
 ## Choose how the edit communicates
 
-Voiceover is optional, but a content or visual narrative spine is required. After the deliverable shape and product facts are clear, choose one primary mode before the Frame and pilot:
+Voiceover is optional, but a content or visual narrative spine is required. After the deliverable shape and product facts are clear, choose one primary mode before the visual system and pilot:
 
 - **voice-led:** existing speech, a user recording, or an approved generated voiceover carries the argument;
 - **screen-copy-led:** concise hook, value, proof, and CTA copy carry the message with music and/or useful source sound;
@@ -35,11 +35,11 @@ When generated voiceover is the recommendation, write a concise footage-aware dr
 
 ## Offer a visual system before the pilot
 
-Skill and Frame remain independent: content category never determines a Frame. For a complete creative build with no attached Frame, once you understand the footage and requested visual feeling, call `manage_frame {action:"list"}` and recommend one or two evidence-based candidates plus a themeless option. When real product footage and light promotional type are the strongest treatment, include `performance-native` (Product Native) as the baseline candidate; it keeps the product full, derives accents from the product world, and reserves Motion Graphics for information that native text (`set_texts`) cannot carry. Wait for the choice unless the user has already said to proceed without asking — then pick the strongest, name it, and continue. After the choice, call `manage_frame {action:"attach", id}`, then `manage_frame {action:"read"}`. Treat its showcases as reference vocabulary rather than framing, layout or transition templates. Your plan — held in working context, not persisted — chooses source spans, media, pacing and composition from the evidence; express the Frame through transferable shape, material, image treatment, typography, color-role relationships, spatial tension, motion temperament and sparse sound texture. Manual palette, captions and layout remain authoritative. Do not merely recolor generic cards.
+Content category never determines the look. For a complete creative build, once you understand the footage and requested visual feeling, call `read_brand`. When the creator has a brand, treat its graphics block as reference vocabulary rather than framing, layout or transition templates. When it returns `no_brand`, follow default visual craft: keep the product full, derive accents from the product world, and reserve Motion Graphics for information that native text (`set_texts`) cannot carry. Your plan — held in working context, not persisted — chooses source spans, media, pacing and composition from the evidence; express the brand through transferable shape, material, image treatment, typography, color-role relationships, spatial tension, motion temperament and sparse sound texture. Manual palette, captions and layout remain authoritative. Do not merely recolor generic cards.
 
 For ordinary product montage, default to real footage plus native text or managed captions. A short hook, benefit, ingredient, texture note, proof qualifier, offer or CTA in product-derived color is the normal graphic layer. Do not create charts, process diagrams, device mockups, multi-card explainers or full-screen Motion Graphics unless the actual product truth genuinely needs that form.
 
-The user may always remain themeless. Themeless still requires deliberate visual craft.
+Without a brand, the edit still requires deliberate visual craft.
 
 ## Audit the clips as usable actions
 
@@ -63,7 +63,7 @@ Use transitions sparingly. Hard cuts, action matches, scale changes, source soun
 
 All output management is `manage_project` with `scope:"output"` (the default). Use `action:"create"` for genuinely independent concepts and `action:"duplicate"` for controlled variations of an approved master. Use `action:"switch"` and `action:"rename"` so the user can understand the family. A switch returns the new `get_state`; timeline clip and track ids are output-local, so never carry ids across a switch.
 
-Create a representative pilot before multiplying uncertain claims, audio, generation, Frame treatment, or layout. Derive its creative thesis, rhythm arc, whole-film video design system and progression of movements from the actual actions and evidence in the footage. Present that proposal and wait for approve/reject before publishable-looking construction. After approval, compile the pilot directly with the batched clip, framing, sound, caption and Component tools; the plan itself stays in your working context as a few sentences (thesis, order of movements, where sound leads) — there is no persisted plan artifact, and a passage is repaired by editing its clips. Once the pilot is coherent and reviewed (`inspect_timeline` with no frames reviews the whole output as a sequence), expand the family in small logical batches. Each output must have a distinct hypothesis, such as mechanism-first versus creator-first, rather than a different color or a random clip order.
+Create a representative pilot before multiplying uncertain claims, audio, generation, visual treatment, or layout. Derive its creative thesis, rhythm arc, whole-film video design system and progression of movements from the actual actions and evidence in the footage. Present that proposal and wait for approve/reject before publishable-looking construction. After approval, compile the pilot directly with the batched clip, framing, sound, caption and Component tools; the plan itself stays in your working context as a few sentences (thesis, order of movements, where sound leads) — there is no persisted plan artifact, and a passage is repaired by editing its clips. Once the pilot is coherent and reviewed (`inspect_timeline` with no frames reviews the whole output as a sequence), expand the family in small logical batches. Each output must have a distinct hypothesis, such as mechanism-first versus creator-first, rather than a different color or a random clip order.
 
 If the approved pilot includes generated voiceover, call `generate_speech` with the exact approved script and a `voiceId`, pass its returned asset fields unchanged to `register_media`, then place it with `add_clips` using `role:"narration"`. Use `manage_voices {action:"list"}` first only when a specific voice identity matters. Treat the known script as semantic truth; call `get_transcript` with the exact `assetId` only when performed word timing, pauses, captions, animation, or beat-aware passage boundaries require measurement (transcript timing is source seconds).
 

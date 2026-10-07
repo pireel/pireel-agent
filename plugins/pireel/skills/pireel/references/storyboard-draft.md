@@ -27,7 +27,7 @@ Derive the likely solution progressively from the material. Resolve consequentia
 
 - the strongest truthful sequence and what footage actually supports it;
 - whether the canvas should stay source-led, split, picture-led or deliberately full-field;
-- the selected Frame or a coherent themeless visual language;
+- the creator's brand graphics direction or a coherent default visual language;
 - missing evidence, product actions, interface states, pickup footage or audio;
 - output count/ratio/duration when the request implies multiple deliverables.
 
@@ -50,12 +50,11 @@ Over MCP there is no `ask_user` tool: ask in your own host's conversation and st
      full-canvas treatment, motion/payoff/exit, sound plan and honest asset strategy.
   5. **Material sufficiency** — what is supported now and any exact missing source that changes quality.
 
-When a Frame is already selected, read it as professional art direction (`manage_frame {action:"read"}`):
-its examples demonstrate transferable shape, material, image, type, color-role, spatial and motion
-principles, not passage types, layouts or media choices. When none is selected and the visual direction
-is materially uncertain, recommend one or two evidence-based Frames (`manage_frame {action:"list"}`) plus
-themeless and wait — unless the user has told you not to ask, in which case pick the strongest and name
-it. The user's manual palette, layout, captions and explicit instructions remain authoritative.
+Read the creator's brand with `read_brand` and treat its graphics block as professional art direction:
+it describes transferable shape, material, image, type, color-role, spatial and motion principles, not
+passage types, layouts or media choices. When it returns `no_brand`, follow default visual craft and let
+the material set the character. The user's manual palette, layout, captions and explicit instructions
+remain authoritative.
 
 ## The plan is working context, not a saved artifact
 
@@ -65,8 +64,8 @@ where sound leads. For a long piece, write it down for yourself in the proposal 
 piece, restate it from the timeline (`get_state` plus `inspect_timeline`) when you resume — the built
 clips are the record. Split a movement when its visual anchor or viewing task changes, not by a fixed
 duration, and give real evidence wherever a passage asks the viewer to believe a claim. When several
-outputs must share one design system, attach the same Frame to each (`manage_frame {action:"attach"}`)
-and carry the sentence-level plan across `manage_project` output switches yourself.
+outputs must share one design system, carry it and the sentence-level plan across `manage_project`
+output switches yourself.
 
 A passage is repaired by its clips: the receipt of every mutation is a delta (touched clips, shifted
 rules, removed clip ids, removed source spans), and the clip ids `inspect_timeline` reports on screen are

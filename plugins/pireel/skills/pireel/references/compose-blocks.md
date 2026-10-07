@@ -25,16 +25,16 @@ Before generation, decide:
 - `instruction`: the layer's communicative job and content—not merely "add a nice card".
 
 Then call `compose_component` with those values. It returns the full `{system, prompt}` contract plus a
-`target`. The prompt already contains the actual box, the backdrop under it, the active Frame or
-themeless visual language and the spoken beats in its window. Generate the answer yourself from that
+`target`. The prompt already contains the actual box, the backdrop under it, the visual language
+(the creator's brand or default craft) and the spoken beats in its window. Generate the answer yourself from that
 contract. No credits are charged here.
 
-Prefer the component library: when no Frame is attached and a registered Component carries the moment
+Prefer the component library: when a registered Component carries the moment
 (a number, comparison, steps, checklist, quote, lower third, call to action, countdown, offer, Q&A,
 location, ranking, myth vs fact, chart…), call `compose_component {format:"kit"}` and answer with the
 component and its props. The result is designed, consistent across the video and editable field by
 field. Use `format:"html"` — one short note, one fenced `html` block and one fenced `js` timeline body —
-when no Component fits, or under a Frame, whose composition only bespoke markup can express. The
+when no Component fits, or when the brand's graphics call for a composition only bespoke markup can express. The
 retrieved Component/pattern candidates are useful landmarks, not a closed menu.
 
 Submit with `apply_component`, copying the returned target `clipId`, `atFrame`, `durationFrames` and
@@ -54,7 +54,7 @@ Do not regenerate for a pure timeline move or resize: `move_clips` retimes, `set
 `apply_layout` arranges several graphic clips with the footage. Changing wording or a declared property is
 not a regeneration either: `get_state` lists a component's on-screen text under `component.texts` and its
 properties under `component.props`; `set_clip_properties {texts | props}` rewrites them in place. A later
-Frame switch does not rewrite already generated Components; only an explicit edit does.
+brand change does not rewrite already generated Components; only an explicit edit does.
 
 ## Design standard
 
@@ -72,7 +72,7 @@ Frame switch does not rewrite already generated Components; only an explicit edi
 ## Beyond the runtime: bake an external render
 
 The component runtime is a closed HTML document: HTML, CSS (inline SVG, container queries, custom
-properties, theme tokens) and GSAP on the paused timeline `tl`. No scripts, libraries, canvas/WebGL,
+properties, design tokens) and GSAP on the paused timeline `tl`. No scripts, libraries, canvas/WebGL,
 iframes or embedded video — the lint rejects them, and a rejection of that kind is not fixable by
 retrying. Most visual explanation fits inside that boundary; design within it first.
 
