@@ -99,7 +99,7 @@ Pireel setup complete:
 
 ## Next
 
-Setup done. Return to the `pireel` skill router and read the matching sibling reference next: `pireel-basics.md` (mental model + tool routing) first, then `captions.md` / `storyboard-draft.md` / `compose-blocks.md` / `export.md` / `talking-head-cleanup.md` / `product-help.md` / `known-errors.md` as the task calls for. Full setup contract and troubleshooting also lives at https://pireel.com/connect-agent.md.
+Setup done. Return to the `pireel` skill router and read the matching sibling reference next: the authenticated server’s `list_skills` / `read_skill` tools (mental model + tool routing) first, then the authenticated server’s `list_skills` / `read_skill` tools / the authenticated server’s `list_skills` / `read_skill` tools / the authenticated server’s `list_skills` / `read_skill` tools / `export.md` / the authenticated server’s `list_skills` / `read_skill` tools / `product-help.md` / `known-errors.md` as the task calls for. Full setup contract and troubleshooting also lives at https://pireel.com/connect-agent.md.
 
 ## Billing note
 
