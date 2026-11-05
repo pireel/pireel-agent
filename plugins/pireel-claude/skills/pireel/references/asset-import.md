@@ -51,6 +51,7 @@ Direct injection is a capability fallback, not an authentication or server-error
 The JSON keeps video import and transcription outcomes separate. `transcription.status` is:
 
 - `completed` — timed transcript rows were registered.
+- `provided` — the rows came from `--transcript`; nothing was sent for recognition.
 - `empty` — transcription ran successfully but found no speech/timed sentences.
 - `skipped` — disabled, no audio track, or ffmpeg was unavailable.
 - `failed` — billing, authentication, upload, storage, or provider failure. The video is still imported, and `error`, optional `http_status`, and a short `detail` explain what needs recovery.
@@ -61,8 +62,10 @@ Full flow: `import_media` (no args, MCP) → token + `base_url` → run helper w
 
 ```bash
 node <pireel-skill-dir>/scripts/import-media.mjs --base <base_url> --token <import-token> /path/to/video.mp4
-# options: --ffmpeg/--ffprobe <path> · --no-transcribe · --broll
+# options: --ffmpeg/--ffprobe <path> · --no-transcribe · --broll · --transcript <file.json>
 ```
+
+When the transcript is already known (a caption file the user has, an earlier recognition), pass it with `--transcript <file.json>` — a JSON array of `{start, end, text}` in source seconds, optionally with `words: [{start, end, text}]` per sentence for word-exact captions and cuts. Nothing is uploaded for recognition and `transcription.status` is `provided`.
 
 **Run the helper OUT of sandbox by default** — it needs the user's local file paths and network access to the Pireel endpoint; request approval instead of attempting a sandboxed run first. The approval description must say that the file is uploaded to the user's Pireel media store and, when transcription is enabled, that its extracted AAC is sent for transcription. A sandboxed `connection refused` does not mean the server is down.
 
@@ -123,7 +126,7 @@ It is uploaded and registered as a library asset; the JSON returns its `assetId`
 ## After import
 
 - Call `get_state` — the new/updated project is now the latest, so offline tools target it; library assets appear with `library: true` until placed. From here on, patch your model from each mutation's delta instead of re-reading.
-- If a transcript was registered (`transcript > 0` in the helper output), use `get_transcript`; for a complete edit follow `storyboard-draft.md`: propose the whole-film design, obtain approval, keep the approved plan in your working context as a few sentences (there is no persisted plan artifact), then build directly with the clip tools.
+- If a transcript was registered (`transcript > 0` in the helper output), use `get_transcript`; for a complete edit follow the authenticated server’s `list_skills` / `read_skill` tools: propose the whole-film design, obtain approval, keep the approved plan in your working context as a few sentences (there is no persisted plan artifact), then build directly with the clip tools.
 - Media-byte analysis, rendered review and export still run in an open tab (`create_browser_handoff`); the tab retrieves the bytes from the cloud store on its own.
 
 ## When NOT to use the helper

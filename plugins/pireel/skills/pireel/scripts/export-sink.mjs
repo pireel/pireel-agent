@@ -40,7 +40,8 @@ const USAGE = `usage: node export-sink.mjs [--out <dir>] [--base <studio origin>
 Opens a one-shot loopback receiver for a Pireel export. Prints {sink_url} as one JSON line,
 then waits for the studio tab to deliver the file (pass sink_url to \`export {action:"start"}\`).
   --out <dir>          where the finished file is saved (default: current directory)
-  --base <origin>      studio origin allowed to deliver (default: $PIREEL_BASE or https://pireel.com)
+  --base <origin>      studio origin allowed to deliver (default: $PIREEL_BASE or https://pireel.com;
+                       a studio on localhost / 127.0.0.1 is always allowed)
   --timeout-min <N>    minutes to wait before giving up, at least 1 (default: 30)`;
 if (args.includes('--help') || args.includes('-h')) {
   console.log(USAGE);
@@ -63,13 +64,16 @@ const routePath = `/${Math.random().toString(36).slice(2)}${Math.random().toStri
 // Same CORS/PNA posture as the import helper's local server: the HTTPS studio page
 // fetching a loopback URL triggers Chrome's Private-Network-Access preflight, and some
 // embedded browsers (Codex Chrome Use) block loopback responses lacking a Content-Type.
-const cors = {
-  'Access-Control-Allow-Origin': BASE,
+// A studio served from this machine (local development) delivers too, without --base: code on
+// this machine can write files here anyway, and the random path stays the capability.
+const LOOPBACK_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
+const corsFor = (origin) => ({
+  'Access-Control-Allow-Origin': origin && LOOPBACK_ORIGIN.test(origin) ? origin : BASE,
   'Access-Control-Allow-Private-Network': 'true',
   'Access-Control-Allow-Methods': 'PUT, POST, OPTIONS',
   'Access-Control-Allow-Headers': '*',
   Vary: 'Origin',
-};
+});
 const TEXT = 'text/plain; charset=utf-8';
 
 /** Filename from the tab's x-pireel-filename header (URI-encoded); basename()d and
@@ -87,6 +91,7 @@ function safeName(req) {
 
 let done = false;
 const server = createServer((req, res) => {
+  const cors = corsFor(req.headers.origin);
   if (req.method === 'OPTIONS') return void res.writeHead(204, { ...cors, 'Content-Type': TEXT }).end();
   if ((req.method !== 'PUT' && req.method !== 'POST') || req.url !== routePath) {
     return void res.writeHead(404, { ...cors, 'Content-Type': TEXT }).end('not found');

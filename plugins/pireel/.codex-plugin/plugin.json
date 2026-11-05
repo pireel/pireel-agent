@@ -21,7 +21,7 @@
     "logo": "./assets/logo.png",
     "displayName": "Pireel Studio",
     "shortDescription": "Edit videos from your AI agent",
-    "longDescription": "Connect your AI agent to Pireel Studio for local media import, transcript editing, montage and multi-output variants, designed graphics, captions, themes, framing and local export. Every result remains visible and editable in the Studio timeline.",
+    "longDescription": "Connect your AI agent to Pireel Studio for local media import, transcript editing, montage and multi-output variants, designed graphics, captions, framing and local export. Every result remains visible and editable in the Studio timeline.",
     "websiteURL": "https://pireel.com",
     "privacyPolicyURL": "https://pireel.com/en/privacy",
     "termsOfServiceURL": "https://pireel.com/en/terms"
@@ -42,7 +42,7 @@
     "codex",
     "mcp"
   ],
-  "version": "0.7.13",
+  "version": "0.7.22",
   "description": "Edit multi-source videos and create finished cuts in Pireel Studio from your AI agent.",
   "homepage": "https://pireel.com",
   "mcpServers": "./.mcp.json",

@@ -20,7 +20,7 @@
     "claude-code",
     "mcp"
   ],
-  "version": "0.7.13",
+  "version": "0.7.22",
   "description": "Edit multi-source videos and create finished cuts in Pireel Studio from your AI agent.",
   "homepage": "https://pireel.com",
   "skills": "./skills/",
