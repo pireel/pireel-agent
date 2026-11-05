@@ -5,7 +5,7 @@ description: FIRST-RUN setup for Pireel Studio. Run this whenever the user asks 
 
 # Getting started with Pireel Studio
 
-Pireel Studio (https://pireel.com) is a multi-source AI video editor for producing one or more independently editable cuts. Through the `pireel` MCP server your tools edit the composition **live in a studio browser tab**: transcript-based cutting, montage, storyboarding, designed graphics, subtitles, themes and local media import.
+Pireel Studio (https://pireel.com) is a multi-source AI video editor for producing one or more independently editable cuts. Through the `pireel` MCP server your tools edit the composition **live in a studio browser tab**: transcript-based cutting, montage, storyboarding, designed graphics, subtitles and local media import.
 
 If you are reading this, the Pireel workflow is already available either from the Pireel Plugin or as a standalone Skill. This connects the MCP server when needed and gets the user to their first edit. Complete **ALL steps in order** — setup is incomplete until you print the self-report in the final step.
 
@@ -99,7 +99,7 @@ Pireel setup complete:
 
 ## Next
 
-Setup done. Return to the `pireel` skill router and read the matching sibling reference next: `pireel-basics.md` (mental model + tool routing) first, then `captions.md` / `storyboard-draft.md` / `compose-blocks.md` / `export.md` / `talking-head-cleanup.md` / `product-help.md` / `known-errors.md` as the task calls for. Full setup contract and troubleshooting also lives at https://pireel.com/connect-agent.md.
+Setup done. Return to the `pireel` skill router and read the matching sibling reference next: the authenticated server’s `list_skills` / `read_skill` tools (mental model + tool routing) first, then the authenticated server’s `list_skills` / `read_skill` tools / the authenticated server’s `list_skills` / `read_skill` tools / the authenticated server’s `list_skills` / `read_skill` tools / `export.md` / the authenticated server’s `list_skills` / `read_skill` tools / `product-help.md` / `known-errors.md` as the task calls for. Full setup contract and troubleshooting also lives at https://pireel.com/connect-agent.md.
 
 ## Billing note
 

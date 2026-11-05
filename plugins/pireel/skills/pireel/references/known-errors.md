@@ -65,7 +65,7 @@ Pireel MCP tools execute in the user's open studio browser tab, relayed through 
 
 **Recovery**: the failure receipt returns a `clipId` (the id the component clip WILL have). Fix ONLY the listed issues in your generated text, **scope every CSS selector under `#<that clipId>`**, and call `apply_component` again passing that same `clipId` back verbatim (plus the same `atFrame`, `durationFrames` and `placement`). Reusing the id keeps the scope target stable across retries — for a brand-new component, do NOT omit `clipId` on the retry or a fresh id is minted and the scope never matches. Do not regenerate from scratch or change unrelated parts. If issues persist after 2–3 targeted fixes, re-read the `compose_component` contract; last resort, `apply_component {generate:true, instruction}` (charges Pireel credits — say so).
 
-A rejection for `<script>`, an external library, canvas/WebGL, an iframe or embedded video is a boundary, not a bug: the runtime is closed and no retry can pass it. Rebuild the visual in markup, CSS and SVG, or — when the idea truly needs a library — render it outside Studio to a transparent WebM and place it as a boxed B-roll clip (`references/compose-blocks.md`, "Beyond the runtime").
+A rejection for `<script>`, an external library, canvas/WebGL, an iframe or embedded video is a boundary, not a bug: the runtime is closed and no retry can pass it. Rebuild the visual in markup, CSS and SVG, or — when the idea truly needs a library — render it outside Studio to a transparent WebM and place it as a boxed B-roll clip (the authenticated server’s `list_skills` / `read_skill` tools, "Beyond the runtime").
 
 ## Persisted plan tools
 
@@ -89,7 +89,7 @@ A rejection for `<script>`, an external library, canvas/WebGL, an iframe or embe
 
 **Meaning**: a tool name or argument shape that doesn't exist on this server.
 
-**Recovery**: re-check the tool list (`tools/list`); do not invent tools or parameters. Ids for clips/tracks/frames/presets must come from `get_state`, tool receipts, `manage_frame {action:"list"}`, or the caption catalog — a made-up id fails inside the tool instead. Timeline positions are integer frames, source positions seconds — a seconds value in a frame field is an invalid-params error, not a rounding issue.
+**Recovery**: re-check the tool list (`tools/list`); do not invent tools or parameters. Ids for clips/tracks/presets must come from `get_state`, tool receipts, or the caption catalog — a made-up id fails inside the tool instead. Timeline positions are integer frames, source positions seconds — a seconds value in a frame field is an invalid-params error, not a rounding issue.
 
 ## General rules
 

@@ -1,7 +1,7 @@
 {
   "channel": "production",
-  "version": "0.7.13",
+  "version": "0.7.22",
   "source": "develop",
-  "sha": "3b0f84c1f847fb510d79f04848852af058bbd2fd",
-  "builtAt": "2026-09-18T18:28:19.902Z"
+  "sha": "5c07d394fb1d617c1f14f74b2a69ae87a44a3771",
+  "builtAt": "2026-11-05T16:08:31.727Z"
 }

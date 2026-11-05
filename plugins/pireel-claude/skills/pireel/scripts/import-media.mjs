@@ -12,7 +12,8 @@
  *
  * Usage (normal flow — the agent gets `token` from the `import_media` MCP tool):
  *   node import-media.mjs --token imp1.… [--base https://pireel.com] \
- *        [--ffmpeg <path>] [--ffprobe <path>] [--no-transcribe] /path/to/video.mp4 /path/to/logo.png …
+ *        [--ffmpeg <path>] [--ffprobe <path>] [--no-transcribe] [--transcript <file.json>]
+ *        /path/to/video.mp4 /path/to/logo.png …
  *
  * B-roll mode (--broll): videos are uploaded and registered as library assets (no transcription,
  * not the narrative source).
@@ -35,7 +36,7 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 
 const args = process.argv.slice(2);
-const VALUE_FLAGS = new Set(['--base', '--token', '--ffmpeg', '--ffprobe']);
+const VALUE_FLAGS = new Set(['--base', '--token', '--ffmpeg', '--ffprobe', '--transcript']);
 const opt = (name, fallback = null) => {
   const i = args.indexOf(`--${name}`);
   return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
@@ -59,12 +60,14 @@ if (has('explain')) {
 }
 if (has('help') || args.includes('-h')) {
   console.log(`usage: node import-media.mjs --token <import token> [--base <origin>] [--broll] [--no-transcribe]
-                            [--ffmpeg <path>] [--ffprobe <path>] <file> [<file> …]
+                            [--transcript <file.json>] [--ffmpeg <path>] [--ffprobe <path>] <file> [<file> …]
 
   --token <token>     short-lived import token from the \`import_media\` MCP tool (required)
   --base <origin>     Pireel origin (default: $PIREEL_BASE or https://pireel.com)
   --broll             register videos as library assets instead of the narrative source
   --no-transcribe     skip the transcription upload even when ffmpeg is available
+  --transcript <json> the main video's transcript, already known: [{start, end, text}] in source
+                      seconds (words [{start, end, text}] optional). Nothing is uploaded or recognized.
   --ffmpeg/--ffprobe  binaries to use (default: FFMPEG_PATH/FFPROBE_PATH env, then PATH)
   --explain           print where each asset type is transferred and exit
 
@@ -220,10 +223,35 @@ function transcriptionFailure(error, detail, httpStatus) {
   };
 }
 
+/** A transcript the agent already has (a caption file, an earlier recognition): read as is. */
+async function knownTranscript(path) {
+  let rows;
+  try {
+    rows = JSON.parse(await readFile(path, 'utf8'));
+  } catch (e) {
+    fail(`--transcript ${path}: not readable JSON (${e instanceof Error ? e.message : String(e)})`);
+  }
+  if (!Array.isArray(rows)) fail('--transcript must be a JSON array of {start, end, text}');
+  const timed = (row) => row && Number.isFinite(row.start) && Number.isFinite(row.end) && row.end > row.start;
+  const segments = rows.filter((row) => timed(row) && typeof row.text === 'string' && row.text.trim()).map((row) => ({
+    start: row.start,
+    end: row.end,
+    text: row.text.trim(),
+    ...(Array.isArray(row.words) && row.words.length && row.words.every((word) => timed(word) && typeof word.text === 'string' && word.text.trim())
+      ? { words: row.words.map((word) => ({ start: word.start, end: word.end, text: word.text.trim() })) }
+      : {}),
+  }));
+  if (segments.length !== rows.length) fail(`--transcript: ${rows.length - segments.length} row(s) lack start < end or text`);
+  console.error(`[pireel-import] transcript: ${segments.length} sentences from ${basename(path)}`);
+  return { status: 'provided', segments };
+}
+
 /** Extract audio → upload the small audio → server-side transcription. The video import remains
  *  usable when transcription fails, but the result preserves the failure instead of making
  *  billing/auth/provider errors look like a valid empty transcript. */
 async function transcribe(path, meta, bins) {
+  const known = opt('transcript');
+  if (known) return knownTranscript(known);
   if (!bins.ffmpeg) return { status: 'skipped', reason: 'ffmpeg_unavailable', segments: [] };
   if (!(meta?.hasAudio ?? true)) return { status: 'skipped', reason: 'no_audio_track', segments: [] };
   if (has('no-transcribe')) return { status: 'skipped', reason: 'disabled', segments: [] };
