@@ -294,9 +294,17 @@ async function transcribe(path, meta, bins) {
       return transcriptionFailure(asr.json.error ?? 'asr_provider_failed', detail);
     }
     const off = meta?.audioOffset ?? 0;
+    // Word times are the recognizer's own measurements; keeping them lets cuts and captions land
+    // on the word instead of on times estimated from the sentence.
+    const timedWord = (w) => w && Number.isFinite(w.start) && Number.isFinite(w.end) && w.end > w.start && typeof w.text === 'string' && w.text.trim();
     const segs = (asr.json.segments ?? [])
       .filter((s) => s.text?.trim())
-      .map((s) => ({ start: Math.max(0, s.start + off), end: Math.max(s.start + off + 0.1, s.end + off), text: s.text.trim() }));
+      .map((s) => {
+        const words = Array.isArray(s.words) && s.words.length && s.words.every(timedWord)
+          ? s.words.map((w) => ({ start: Math.max(0, w.start + off), end: w.end + off, text: w.text.trim() }))
+          : undefined;
+        return { start: Math.max(0, s.start + off), end: Math.max(s.start + off + 0.1, s.end + off), text: s.text.trim(), ...(words ? { words } : {}) };
+      });
     if (!segs.length) {
       console.error('[pireel-import] transcript: no timed sentences returned');
       return { status: 'empty', reason: 'no_timed_sentences', segments: [] };
