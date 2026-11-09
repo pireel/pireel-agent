@@ -31,12 +31,12 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { openAsBlob } from 'node:fs';
-import { open, stat, readFile, unlink } from 'node:fs/promises';
+import { open, stat, readFile, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 
 const args = process.argv.slice(2);
-const VALUE_FLAGS = new Set(['--base', '--token', '--ffmpeg', '--ffprobe', '--transcript']);
+const VALUE_FLAGS = new Set(['--base', '--token', '--ffmpeg', '--ffprobe', '--transcript', '--transcript-out']);
 const opt = (name, fallback = null) => {
   const i = args.indexOf(`--${name}`);
   return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
@@ -49,6 +49,7 @@ const files = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && VALUE_FLAG
 const TRANSFER_MATRIX = [
   "Main video:          uploaded to the user's Pireel cloud media store (content-addressed; duplicates are instant)",
   'Transcription audio: a small AAC is uploaded for transcription (only when ffmpeg is available and --no-transcribe is absent)',
+  'Transcribe only:     with --transcribe-only, only that AAC is uploaded; the video stays on this device',
   'B-roll (--broll):    uploaded to the cloud media store, registered as a project library asset',
   'Images:              uploaded to the cloud media store, registered as a project library asset',
   'Audio:               uploaded to the cloud media store, registered as a project library asset',
@@ -60,7 +61,8 @@ if (has('explain')) {
 }
 if (has('help') || args.includes('-h')) {
   console.log(`usage: node import-media.mjs --token <import token> [--base <origin>] [--broll] [--no-transcribe]
-                            [--transcript <file.json>] [--ffmpeg <path>] [--ffprobe <path>] <file> [<file> …]
+                            [--transcript <file.json>] [--transcript-out <file.json>] [--transcribe-only]
+                            [--ffmpeg <path>] [--ffprobe <path>] <file> [<file> …]
 
   --token <token>     short-lived import token from the \`import_media\` MCP tool (required)
   --base <origin>     Pireel origin (default: $PIREEL_BASE or https://pireel.com)
@@ -68,6 +70,10 @@ if (has('help') || args.includes('-h')) {
   --no-transcribe     skip the transcription upload even when ffmpeg is available
   --transcript <json> the main video's transcript, already known: [{start, end, text}] in source
                       seconds (words [{start, end, text}] optional). Nothing is uploaded or recognized.
+  --transcript-out <json>  also save the main video's transcript here: [{start, end, text, words}] in
+                      source seconds, with the recognizer's word timing (for local editing tools)
+  --transcribe-only   only transcribe: a small audio track is uploaded for recognition, the video is
+                      not uploaded and nothing is added to the project (use with --transcript-out)
   --ffmpeg/--ffprobe  binaries to use (default: FFMPEG_PATH/FFPROBE_PATH env, then PATH)
   --explain           print where each asset type is transferred and exit
 
@@ -316,6 +322,24 @@ async function transcribe(path, meta, bins) {
   }
 }
 
+/** Transcription only: the small audio goes up for recognition; the video stays on this machine and
+ *  nothing is added to the project. For editing locally with the transcript (--transcript-out). */
+async function transcribeOnly(path, bins) {
+  const meta = bins.ffprobe ? probe(bins.ffprobe, path) : null;
+  console.error(`[pireel-import] ${basename(path)} · transcription only (the video is not uploaded)`);
+  const transcription = await transcribe(path, meta, bins);
+  const { segments, ...transcriptionResult } = transcription;
+  const transcriptOut = opt('transcript-out');
+  if (transcriptOut && segments.length) await writeFile(transcriptOut, JSON.stringify(segments, null, 1));
+  return {
+    file: basename(path),
+    transcript: segments.length,
+    transcription: transcriptionResult,
+    ...(transcriptOut && segments.length ? { transcriptFile: transcriptOut } : {}),
+    delivery: 'transcript-only',
+  };
+}
+
 /** Main video: upload, transcribe, register as the narrative source of the active project. */
 async function importMainVideo(path, bins) {
   const st = await stat(path);
@@ -338,12 +362,15 @@ async function importMainVideo(path, bins) {
   });
   if (!reg.ok || !reg.json.ok) fail(`register failed: ${reg.json.error ?? `HTTP ${reg.status}`}${reg.json.summary ? ` — ${reg.json.summary}` : ''}`);
   const { segments: _segments, ...transcriptionResult } = transcription;
+  const transcriptOut = opt('transcript-out');
+  if (transcriptOut && transcript.length) await writeFile(transcriptOut, JSON.stringify(transcript, null, 1));
   return {
     file: basename(path),
     sig,
     key,
     ...reg.json.data,
     transcript: transcript.length,
+    ...(transcriptOut && transcript.length ? { transcriptFile: transcriptOut } : {}),
     transcription: transcriptionResult,
     probed: !!meta,
     delivery: 'cloud',
@@ -354,12 +381,13 @@ const bins = { ffprobe: resolveBin('ffprobe', 'ffprobe', 'FFPROBE_PATH'), ffmpeg
 if (!bins.ffmpeg || !bins.ffprobe) {
   console.error('[pireel-import] ffmpeg/ffprobe not fully available — degraded import (see skill: install them for metadata + transcript)');
 }
-console.error('[pireel-import] data paths:\n' + TRANSFER_MATRIX.map((l) => `  ${l}`).join('\n'));
+console.error('[pireel-import] data paths:\n' + (has('transcribe-only') ? TRANSFER_MATRIX.filter((l) => l.startsWith('Transcribe only')) : TRANSFER_MATRIX).map((l) => `  ${l}`).join('\n'));
 const out = [];
 for (const f of files) {
   const image = f.toLowerCase().match(/\.(png|jpe?g|webp|gif)$/)?.[1];
   const audio = f.toLowerCase().match(/\.(mp3|m4a|aac|wav|flac|ogg|opus|weba)$/)?.[1];
-  if (image) out.push(await importLibraryAsset(f, 'image', IMAGE_MIME[image], bins));
+  if (has('transcribe-only')) out.push(await transcribeOnly(f, bins));
+  else if (image) out.push(await importLibraryAsset(f, 'image', IMAGE_MIME[image], bins));
   else if (audio) out.push(await importLibraryAsset(f, 'audio', AUDIO_MIME[audio], bins));
   else if (has('broll')) out.push(await importLibraryAsset(f, 'video', videoMime(f), bins));
   else out.push(await importMainVideo(f, bins));
