@@ -129,10 +129,9 @@ if (!existsSync(join(root, CODEX))) {
  * source wording moved and the rule must be updated rather than the output hand-patched. */
 const ENV_NAME = channel.envName ?? channel.displayName;
 const PROSE = channel.baseUrl === 'https://pireel.com' ? [] : [
-  { file: `${SKILLS}/pireel/SKILL.md`, must: true, from: 'Edit videos in Pireel Studio through the `pireel` MCP server', to: `Edit videos in ${channel.displayName} through the \`${channel.mcpServer}\` MCP server` },
-  { file: `${SKILLS}/pireel/SKILL.md`, must: true, from: 'install/connect Pireel or edit', to: `install/connect ${ENV_NAME} or edit` },
-  { file: `${SKILLS}/pireel/SKILL.md`, must: true, from: 'before the first Pireel MCP call', to: `before the first ${ENV_NAME} MCP call` },
-  { file: `${SKILLS}/pireel/SKILL.md`, must: true, from: "the user's latest project", to: `the user's latest ${ENV_NAME.replace(/^Pireel /, '')} project` },
+  { file: `${SKILLS}/pireel/SKILL.md`, must: true, from: 'Connect an AI agent to hosted Pireel Studio,', to: `Connect an AI agent to hosted ${channel.displayName},` },
+  { file: `${SKILLS}/pireel/SKILL.md`, must: true, from: 'Pireel (https://pireel.com) provides', to: `${ENV_NAME} (${channel.baseUrl}) provides` },
+  { file: `${SKILLS}/pireel/SKILL.md`, must: true, from: 'direct the user to Pireel Studio and explain', to: `direct the user to ${channel.displayName} and explain` },
   { file: `${SKILLS}/pireel/references/getting-started.md`, must: true, from: 'FIRST-RUN setup for Pireel Studio.', to: `FIRST-RUN setup for ${channel.displayName}.` },
   { file: 'README.md', must: true, from: 'or another compatible AI agent to\n[Pireel Studio](https://pireel.com).', to: `or another compatible AI agent to the\nisolated [${channel.displayName}](${channel.baseUrl}) environment.` },
   { re: /`pireel` MCP server/g, to: `\`${channel.mcpServer}\` MCP server`, skillsOnly: true },

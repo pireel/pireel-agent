@@ -53,14 +53,15 @@ test('preview: is never published and builds out of tree under its own id', asyn
     const mcp = JSON.parse(await read(join(root, '.local/preview/plugins/pireel-preview/.mcp.json'), 'utf8'));
     assert.equal(mcp.mcpServers['pireel-preview'].url, 'https://preview.pireel.com/api/studio/mcp');
     const skill = await read(join(root, '.local/preview/plugins/pireel-preview/skills/pireel/SKILL.md'), 'utf8');
-    assert.match(skill, /`pireel-preview` MCP server/);
+    assert.match(skill, /hosted Pireel Studio Preview,/);
+    assert.match(skill, /\(https:\/\/preview\.pireel\.com\) provides/);
     assert.match(skill, /Pireel Preview/);
     // Preview remains reproducible, and building it does not modify the authored source.
     const checked = run(root, 'preview', '--out', '.local/preview', '--check');
     assert.equal(checked.status, 0, checked.output);
     const authoredSkill = await read(join(root, 'plugins/pireel/skills/pireel/SKILL.md'), 'utf8');
-    assert.match(authoredSkill, /`pireel` MCP server/);
-    assert.doesNotMatch(authoredSkill, /`pireel-preview` MCP server/);
+    assert.match(authoredSkill, /hosted Pireel Studio,/);
+    assert.doesNotMatch(authoredSkill, /preview\.pireel\.com/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

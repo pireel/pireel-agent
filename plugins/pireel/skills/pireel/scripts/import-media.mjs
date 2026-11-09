@@ -31,12 +31,12 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { openAsBlob } from 'node:fs';
-import { open, stat, readFile, unlink } from 'node:fs/promises';
+import { open, stat, readFile, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 
 const args = process.argv.slice(2);
-const VALUE_FLAGS = new Set(['--base', '--token', '--ffmpeg', '--ffprobe', '--transcript']);
+const VALUE_FLAGS = new Set(['--base', '--token', '--ffmpeg', '--ffprobe', '--transcript', '--transcript-out']);
 const opt = (name, fallback = null) => {
   const i = args.indexOf(`--${name}`);
   return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
@@ -49,6 +49,7 @@ const files = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && VALUE_FLAG
 const TRANSFER_MATRIX = [
   "Main video:          uploaded to the user's Pireel cloud media store (content-addressed; duplicates are instant)",
   'Transcription audio: a small AAC is uploaded for transcription (only when ffmpeg is available and --no-transcribe is absent)',
+  'Transcribe only:     with --transcribe-only, only that AAC is uploaded; the video stays on this device',
   'B-roll (--broll):    uploaded to the cloud media store, registered as a project library asset',
   'Images:              uploaded to the cloud media store, registered as a project library asset',
   'Audio:               uploaded to the cloud media store, registered as a project library asset',
@@ -60,7 +61,8 @@ if (has('explain')) {
 }
 if (has('help') || args.includes('-h')) {
   console.log(`usage: node import-media.mjs --token <import token> [--base <origin>] [--broll] [--no-transcribe]
-                            [--transcript <file.json>] [--ffmpeg <path>] [--ffprobe <path>] <file> [<file> …]
+                            [--transcript <file.json>] [--transcript-out <file.json>] [--transcribe-only]
+                            [--ffmpeg <path>] [--ffprobe <path>] <file> [<file> …]
 
   --token <token>     short-lived import token from the \`import_media\` MCP tool (required)
   --base <origin>     Pireel origin (default: $PIREEL_BASE or https://pireel.com)
@@ -68,6 +70,10 @@ if (has('help') || args.includes('-h')) {
   --no-transcribe     skip the transcription upload even when ffmpeg is available
   --transcript <json> the main video's transcript, already known: [{start, end, text}] in source
                       seconds (words [{start, end, text}] optional). Nothing is uploaded or recognized.
+  --transcript-out <json>  also save the main video's transcript here: [{start, end, text, words}] in
+                      source seconds, with the recognizer's word timing (for local editing tools)
+  --transcribe-only   only transcribe: a small audio track is uploaded for recognition, the video is
+                      not uploaded and nothing is added to the project (use with --transcript-out)
   --ffmpeg/--ffprobe  binaries to use (default: FFMPEG_PATH/FFPROBE_PATH env, then PATH)
   --explain           print where each asset type is transferred and exit
 
@@ -117,8 +123,33 @@ function probe(ffprobe, path) {
   }
 }
 
+/**
+ * A request that may be sent again with no side effect (a presign, a content-addressed PUT), retried on
+ * a dropped connection or a server hiccup: a long upload can lose its socket (EPIPE, ECONNRESET)
+ * though nothing is wrong. Charged or registering calls never go through this.
+ */
+async function idempotentFetch(url, init, label) {
+  const transient = (error) => /EPIPE|ECONNRESET|ETIMEDOUT|EAI_AGAIN|UND_ERR_SOCKET|other side closed|fetch failed/i
+    .test(`${error?.message ?? ''} ${error?.cause?.code ?? ''} ${error?.cause?.message ?? ''}`);
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      const response = await fetch(url, typeof init === 'function' ? await init() : init);
+      if ((response.status >= 500 || response.status === 429) && attempt < 4) throw Object.assign(new Error(`HTTP ${response.status}`), { retryable: true });
+      return response;
+    } catch (error) {
+      if (attempt >= 4 || !(error?.retryable || transient(error))) throw error;
+      console.error(`[pireel-import] ${label}: ${error?.cause?.code ?? error?.message ?? error}, retrying (${attempt}/3)…`);
+      await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** (attempt - 1)));
+    }
+  }
+}
+
 async function media(body) {
-  const r = await fetch(`${BASE}/api/studio/media`, { method: 'POST', headers: HEADERS, body: JSON.stringify(body) });
+  const init = { method: 'POST', headers: HEADERS, body: JSON.stringify(body) };
+  // Only presigning repeats harmlessly; register and asr (charged) are sent once.
+  const r = body.action === 'put' || body.action === 'put-audio'
+    ? await idempotentFetch(`${BASE}/api/studio/media`, init, `prepare ${body.action}`)
+    : await fetch(`${BASE}/api/studio/media`, init);
   const j = await r.json().catch(() => ({}));
   return { ok: r.ok, status: r.status, json: j };
 }
@@ -165,12 +196,13 @@ async function upload(path, sig, contentType) {
     return { key: pre.json.key, uploaded: false };
   }
   console.error(`[pireel-import] uploading ${(size / 1048576).toFixed(1)}MB…`);
-  const put = await fetch(pre.json.url, {
+  // The body is opened again for every attempt: a stream that was half sent cannot be resent.
+  const put = await idempotentFetch(pre.json.url, async () => ({
     method: 'PUT',
     headers: { 'Content-Type': pre.json.content_type ?? contentType, 'Cache-Control': 'public, max-age=2592000, immutable' },
     body: await openAsBlob(path, { type: pre.json.content_type ?? contentType }),
     duplex: 'half',
-  });
+  }), 'upload');
   if (!put.ok) fail(`upload failed: HTTP ${put.status}`);
   return { key: pre.json.key, uploaded: true };
 }
@@ -271,11 +303,11 @@ async function transcribe(path, meta, bins) {
         preA.status,
       );
     }
-    const putA = await fetch(preA.json.url, {
+    const putA = await idempotentFetch(preA.json.url, {
       method: 'PUT',
       headers: { 'Content-Type': 'audio/mp4', 'Cache-Control': 'public, max-age=2592000, immutable' },
       body: audio,
-    });
+    }, 'audio upload');
     if (!putA.ok) return transcriptionFailure('audio_upload_failed', undefined, putA.status);
     const asr = await media({ action: 'asr', audio_key: preA.json.key, duration_sec: meta?.durationSec });
     if (!asr.ok) {
@@ -294,9 +326,17 @@ async function transcribe(path, meta, bins) {
       return transcriptionFailure(asr.json.error ?? 'asr_provider_failed', detail);
     }
     const off = meta?.audioOffset ?? 0;
+    // Word times are the recognizer's own measurements; keeping them lets cuts and captions land
+    // on the word instead of on times estimated from the sentence.
+    const timedWord = (w) => w && Number.isFinite(w.start) && Number.isFinite(w.end) && w.end > w.start && typeof w.text === 'string' && w.text.trim();
     const segs = (asr.json.segments ?? [])
       .filter((s) => s.text?.trim())
-      .map((s) => ({ start: Math.max(0, s.start + off), end: Math.max(s.start + off + 0.1, s.end + off), text: s.text.trim() }));
+      .map((s) => {
+        const words = Array.isArray(s.words) && s.words.length && s.words.every(timedWord)
+          ? s.words.map((w) => ({ start: Math.max(0, w.start + off), end: w.end + off, text: w.text.trim() }))
+          : undefined;
+        return { start: Math.max(0, s.start + off), end: Math.max(s.start + off + 0.1, s.end + off), text: s.text.trim(), ...(words ? { words } : {}) };
+      });
     if (!segs.length) {
       console.error('[pireel-import] transcript: no timed sentences returned');
       return { status: 'empty', reason: 'no_timed_sentences', segments: [] };
@@ -306,6 +346,24 @@ async function transcribe(path, meta, bins) {
   } finally {
     await unlink(tmp).catch(() => {});
   }
+}
+
+/** Transcription only: the small audio goes up for recognition; the video stays on this machine and
+ *  nothing is added to the project. For editing locally with the transcript (--transcript-out). */
+async function transcribeOnly(path, bins) {
+  const meta = bins.ffprobe ? probe(bins.ffprobe, path) : null;
+  console.error(`[pireel-import] ${basename(path)} · transcription only (the video is not uploaded)`);
+  const transcription = await transcribe(path, meta, bins);
+  const { segments, ...transcriptionResult } = transcription;
+  const transcriptOut = opt('transcript-out');
+  if (transcriptOut && segments.length) await writeFile(transcriptOut, JSON.stringify(segments, null, 1));
+  return {
+    file: basename(path),
+    transcript: segments.length,
+    transcription: transcriptionResult,
+    ...(transcriptOut && segments.length ? { transcriptFile: transcriptOut } : {}),
+    delivery: 'transcript-only',
+  };
 }
 
 /** Main video: upload, transcribe, register as the narrative source of the active project. */
@@ -330,12 +388,15 @@ async function importMainVideo(path, bins) {
   });
   if (!reg.ok || !reg.json.ok) fail(`register failed: ${reg.json.error ?? `HTTP ${reg.status}`}${reg.json.summary ? ` — ${reg.json.summary}` : ''}`);
   const { segments: _segments, ...transcriptionResult } = transcription;
+  const transcriptOut = opt('transcript-out');
+  if (transcriptOut && transcript.length) await writeFile(transcriptOut, JSON.stringify(transcript, null, 1));
   return {
     file: basename(path),
     sig,
     key,
     ...reg.json.data,
     transcript: transcript.length,
+    ...(transcriptOut && transcript.length ? { transcriptFile: transcriptOut } : {}),
     transcription: transcriptionResult,
     probed: !!meta,
     delivery: 'cloud',
@@ -346,12 +407,13 @@ const bins = { ffprobe: resolveBin('ffprobe', 'ffprobe', 'FFPROBE_PATH'), ffmpeg
 if (!bins.ffmpeg || !bins.ffprobe) {
   console.error('[pireel-import] ffmpeg/ffprobe not fully available — degraded import (see skill: install them for metadata + transcript)');
 }
-console.error('[pireel-import] data paths:\n' + TRANSFER_MATRIX.map((l) => `  ${l}`).join('\n'));
+console.error('[pireel-import] data paths:\n' + (has('transcribe-only') ? TRANSFER_MATRIX.filter((l) => l.startsWith('Transcribe only')) : TRANSFER_MATRIX).map((l) => `  ${l}`).join('\n'));
 const out = [];
 for (const f of files) {
   const image = f.toLowerCase().match(/\.(png|jpe?g|webp|gif)$/)?.[1];
   const audio = f.toLowerCase().match(/\.(mp3|m4a|aac|wav|flac|ogg|opus|weba)$/)?.[1];
-  if (image) out.push(await importLibraryAsset(f, 'image', IMAGE_MIME[image], bins));
+  if (has('transcribe-only')) out.push(await transcribeOnly(f, bins));
+  else if (image) out.push(await importLibraryAsset(f, 'image', IMAGE_MIME[image], bins));
   else if (audio) out.push(await importLibraryAsset(f, 'audio', AUDIO_MIME[audio], bins));
   else if (has('broll')) out.push(await importLibraryAsset(f, 'video', videoMime(f), bins));
   else out.push(await importMainVideo(f, bins));

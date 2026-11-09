@@ -99,7 +99,7 @@ Pireel setup complete:
 
 ## Next
 
-Setup done. Return to the `pireel` skill router and read the matching sibling reference next: the authenticated server’s `list_skills` / `read_skill` tools (mental model + tool routing) first, then the authenticated server’s `list_skills` / `read_skill` tools / the authenticated server’s `list_skills` / `read_skill` tools / the authenticated server’s `list_skills` / `read_skill` tools / `export.md` / the authenticated server’s `list_skills` / `read_skill` tools / `product-help.md` / `known-errors.md` as the task calls for. Full setup contract and troubleshooting also lives at https://pireel.com/connect-agent.md.
+Setup done. Return to the `pireel` skill router. For the work itself, find the matching workflow with the authenticated server’s `list_skills` and follow it with `read_skill`; for delivery and problems, read the sibling references `asset-import.md`, `export.md`, `product-help.md` and `known-errors.md` as the task calls for. Full setup contract and troubleshooting also lives at https://pireel.com/connect-agent.md.
 
 ## Billing note
 
