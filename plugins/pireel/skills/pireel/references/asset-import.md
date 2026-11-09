@@ -126,7 +126,7 @@ It is uploaded and registered as a library asset; the JSON returns its `assetId`
 ## After import
 
 - Call `get_state` — the new/updated project is now the latest, so offline tools target it; library assets appear with `library: true` until placed. From here on, patch your model from each mutation's delta instead of re-reading.
-- If a transcript was registered (`transcript > 0` in the helper output), use `get_transcript`; for a complete edit follow the authenticated server’s `list_skills` / `read_skill` tools: propose the whole-film design, obtain approval, keep the approved plan in your working context as a few sentences (there is no persisted plan artifact), then build directly with the clip tools.
+- If a transcript was registered (`transcript > 0` in the helper output), use `get_transcript`; for a complete edit, find the matching workflow with `list_skills`, follow it with `read_skill`, and propose the whole-film design, obtain approval, keep the approved plan in your working context as a few sentences (there is no persisted plan artifact), then build directly with the clip tools.
 - Media-byte analysis, rendered review and export still run in an open tab (`create_browser_handoff`); the tab retrieves the bytes from the cloud store on its own.
 
 ## When NOT to use the helper

@@ -85,6 +85,13 @@ jobs:
           To change it, edit the source and re-run this workflow.
           The version comes from \`package.json\` on the source branch: **$VERSION**.
           EOF
-          gh pr create --base "main" --head "release/production" \
-            --title "release: production $VERSION" --body-file "$BODY_FILE" \
-            || gh pr edit "release/production" --title "release: production $VERSION" --body-file "$BODY_FILE"
+          # Edit only an OPEN release PR: `gh pr edit <branch>` would otherwise pick a closed PR that
+          # once used the same head branch and rewrite its title and body. When Actions may not open
+          # pull requests in this repository, say so and leave the branch for a maintainer to open.
+          OPEN_PR=$(gh pr list --base "main" --head "release/production" --state open --json number -q '.[0].number')
+          if [ -n "$OPEN_PR" ]; then
+            gh pr edit "$OPEN_PR" --title "release: production $VERSION" --body-file "$BODY_FILE"
+          elif ! gh pr create --base "main" --head "release/production" \
+            --title "release: production $VERSION" --body-file "$BODY_FILE"; then
+            echo "::warning::Could not open the release pull request (Actions may not be allowed to). Open it by hand: release/production -> main, titled \"release: production $VERSION\"."
+          fi
