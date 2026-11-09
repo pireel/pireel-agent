@@ -123,8 +123,33 @@ function probe(ffprobe, path) {
   }
 }
 
+/**
+ * A request that may be sent again with no side effect (a presign, a content-addressed PUT), retried on
+ * a dropped connection or a server hiccup: a long upload can lose its socket (EPIPE, ECONNRESET)
+ * though nothing is wrong. Charged or registering calls never go through this.
+ */
+async function idempotentFetch(url, init, label) {
+  const transient = (error) => /EPIPE|ECONNRESET|ETIMEDOUT|EAI_AGAIN|UND_ERR_SOCKET|other side closed|fetch failed/i
+    .test(`${error?.message ?? ''} ${error?.cause?.code ?? ''} ${error?.cause?.message ?? ''}`);
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      const response = await fetch(url, typeof init === 'function' ? await init() : init);
+      if ((response.status >= 500 || response.status === 429) && attempt < 4) throw Object.assign(new Error(`HTTP ${response.status}`), { retryable: true });
+      return response;
+    } catch (error) {
+      if (attempt >= 4 || !(error?.retryable || transient(error))) throw error;
+      console.error(`[pireel-import] ${label}: ${error?.cause?.code ?? error?.message ?? error}, retrying (${attempt}/3)…`);
+      await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** (attempt - 1)));
+    }
+  }
+}
+
 async function media(body) {
-  const r = await fetch(`${BASE}/api/studio/media`, { method: 'POST', headers: HEADERS, body: JSON.stringify(body) });
+  const init = { method: 'POST', headers: HEADERS, body: JSON.stringify(body) };
+  // Only presigning repeats harmlessly; register and asr (charged) are sent once.
+  const r = body.action === 'put' || body.action === 'put-audio'
+    ? await idempotentFetch(`${BASE}/api/studio/media`, init, `prepare ${body.action}`)
+    : await fetch(`${BASE}/api/studio/media`, init);
   const j = await r.json().catch(() => ({}));
   return { ok: r.ok, status: r.status, json: j };
 }
@@ -171,12 +196,13 @@ async function upload(path, sig, contentType) {
     return { key: pre.json.key, uploaded: false };
   }
   console.error(`[pireel-import] uploading ${(size / 1048576).toFixed(1)}MB…`);
-  const put = await fetch(pre.json.url, {
+  // The body is opened again for every attempt: a stream that was half sent cannot be resent.
+  const put = await idempotentFetch(pre.json.url, async () => ({
     method: 'PUT',
     headers: { 'Content-Type': pre.json.content_type ?? contentType, 'Cache-Control': 'public, max-age=2592000, immutable' },
     body: await openAsBlob(path, { type: pre.json.content_type ?? contentType }),
     duplex: 'half',
-  });
+  }), 'upload');
   if (!put.ok) fail(`upload failed: HTTP ${put.status}`);
   return { key: pre.json.key, uploaded: true };
 }
@@ -277,11 +303,11 @@ async function transcribe(path, meta, bins) {
         preA.status,
       );
     }
-    const putA = await fetch(preA.json.url, {
+    const putA = await idempotentFetch(preA.json.url, {
       method: 'PUT',
       headers: { 'Content-Type': 'audio/mp4', 'Cache-Control': 'public, max-age=2592000, immutable' },
       body: audio,
-    });
+    }, 'audio upload');
     if (!putA.ok) return transcriptionFailure('audio_upload_failed', undefined, putA.status);
     const asr = await media({ action: 'asr', audio_key: preA.json.key, duration_sec: meta?.durationSec });
     if (!asr.ok) {
